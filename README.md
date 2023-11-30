@@ -1,2 +1,2 @@
-# SLPM
-Simple Lumped-Parameter Models
+# LPMS
+Lumped-Parameter Model Solver
