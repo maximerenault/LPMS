@@ -100,7 +100,7 @@ class GridZoom(ttk.Frame):
         if event.num == 5 or event.delta == -120:  # scroll down
             sp = self.pixgrid
             self.pixgrid = int(sp/self.delta)
-            if self.pixgrid < 50: self.pixgrid=50
+            if self.pixgrid < 20: self.pixgrid=20
             self.imscale /= float(sp)/float(self.pixgrid)
             scale        /= float(sp)/float(self.pixgrid)
         if event.num == 4 or event.delta == 120:  # scroll up
@@ -166,12 +166,12 @@ class GridZoom(ttk.Frame):
             self.canvas.lift(id)
     
     def coord2pix(self, coordarray: np.ndarray):
-        pixarray = np.zeros_like(coordarray)
-        pixarray[0::2] = (coordarray[0::2]*self.pixgrid + self.x + self.dotsize//2).astype('int')
-        pixarray[1::2] = (-coordarray[1::2]*self.pixgrid + self.y + self.dotsize//2).astype('int')
+        pixarray = np.zeros_like(coordarray, dtype=int)
+        pixarray[0::2] = (coordarray[0::2]*self.pixgrid + self.x + self.dotsize//2).astype(int)
+        pixarray[1::2] = (-coordarray[1::2]*self.pixgrid + self.y + self.dotsize//2).astype(int)
         return pixarray
     
-    def pix2coord(self, pixx: int, pixy: int):
+    def pix2coord(self, pixx: int, pixy: int, dtype=float):
         coordx = (pixx-self.dotsize//2 - self.x)/self.pixgrid   # 1 pixel difference because of the background
         coordy = -(pixy-self.dotsize//2 - self.y)/self.pixgrid   # again Minus because y inverted
         return coordx, coordy
