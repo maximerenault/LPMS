@@ -9,10 +9,10 @@ class CircuitGraph() :
         self.nodes = []
         self.connectivities = []
 
-    def add_elem(self, elem):
+    def add_elem(self, elem) -> None:
         self.elems.append(elem)
 
-    def add_elem_nodes(self, elem):
+    def add_elem_nodes(self, elem) -> None:
         '''
         Uses a binary search to insert new nodes
         in nodes list, or to find existing nodes.
@@ -26,7 +26,7 @@ class CircuitGraph() :
             else :
                 self.nodes.insert(index, elem.nodes[i])
 
-    def gen_connx(self):
+    def gen_connx(self) -> None:
         '''
         Generates compact connectivity list
         based on elements and nodes.
@@ -45,7 +45,7 @@ class CircuitGraph() :
             self.connectivities[n*(n-1)//2+m] = el_id+1
         print(self.connect2mat())
 
-    def gen_connectivities(self):
+    def gen_connectivities(self) -> None:
         '''
         DEPRECATED
         Generates compact connectivities list
@@ -90,7 +90,7 @@ class CircuitGraph() :
                 self.connectivities[n*(n-1)//2+m] = el_id+1
         # print(self.connect2mat())
 
-    def connect2mat(self):
+    def connect2mat(self) -> np.ndarray:
         '''
         Returns the full connectivity matrix
         from the compact version : connectivities.
@@ -108,10 +108,10 @@ class CircuitGraph() :
         print('Nb of connected components :',connected_components(newarr)[0])
         return mat
     
-    def show(self):
+    def show(self) -> None:
         return
     
-    def binary_search_node(self, low, high, node):
+    def binary_search_node(self, low, high, node) -> (int, bool):
         '''
         Returns the index of the node for insertion,
         or the index of the existing node if exists==True.
@@ -141,7 +141,36 @@ class CircuitGraph() :
             exists = False
         return index, exists
     
-    def del_elem(self,index):
+    def binary_search_elem(self, low, high, elem) -> (int, bool):
+        '''
+        Returns the index of the elem for insertion,
+        or the index of the existing elem if exists==True.
+        Normally elems are created in order so there shouldn't be any use for the firt option.
+        '''
+        index = 0
+        exists = False
+        selems = self.elems
+        l = len(selems)
+        if l == 0 :
+            index = 0
+            exists = False
+        elif high >= low:
+            mid = (high+low)//2
+            sid = selems[mid].ids[0]
+            id = elem.ids[0]
+            if sid==id:
+                index = mid
+                exists = True
+            elif sid>id:
+                return self.binary_search_elem(low,mid-1,elem)
+            else :
+                return self.binary_search_elem(mid+1,high,elem)
+        else :
+            index = low
+            exists = False
+        return index, exists
+    
+    def del_elem(self,index) -> None:
         '''
         Deletes the element at position [index].
         Also deletes associated nodes if they are
@@ -155,4 +184,4 @@ class CircuitGraph() :
                 l = len(self.nodes[index].elems)
                 if l==0 :
                     self.nodes.pop(index)
-        self.elems.pop(index)
+        self.elems.remove(elem)

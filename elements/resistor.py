@@ -2,29 +2,31 @@ import numpy as np
 from elements.wire import Wire
 
 class Resistor(Wire):
-    def __init__(self, drbd, node1, node2, R) -> None:
-        super().__init__(drbd, node1, node2)
+    def __init__(self, node1, node2, R) -> None:
+        super().__init__(node1, node2)
         self.R = R
+        self.widths = [1,2]
     
-    def draw(self):
-        x0, y0, x1, y1 = self.drbd.coord2pix(self.getcoords())
-        self.ids.append(self.drbd.canvas.create_line(x0, y0, x1, y1,
+    def draw(self, drbd):
+        x0, y0, x1, y1 = drbd.coord2pix(self.getcoords())
+        self.ids.append(drbd.canvas.create_line(x0, y0, x1, y1,
                                                     tags="circuit"))
         x0, y0, x1, y1, x2, y2, x3, y3 = self.get_rect_coords()
-        x0, y0, x1, y1, x2, y2, x3, y3 = self.drbd.coord2pix(np.array([x0,y0,x1,y1,x2,y2,x3,y3]))
-        self.ids.append(self.drbd.canvas.create_polygon(x0, y0, x1, y1, x2, y2, x3, y3, 
-                                                        fill="white",
-                                                        outline="black",
-                                                        width = 2,
-                                                        activewidth=3,
-                                                        tags="circuit"))
+        x0, y0, x1, y1, x2, y2, x3, y3 = drbd.coord2pix(np.array([x0,y0,x1,y1,x2,y2,x3,y3]))
+        self.ids.append(drbd.canvas.create_polygon(x0, y0, x1, y1, x2, y2, x3, y3, 
+                                                    fill="white",
+                                                    outline="black",
+                                                    width = 2,
+                                                    tags="circuit"))
+        self.drawbbox(drbd)
     
-    def redraw(self):
-        x0, y0, x1, y1 = self.drbd.coord2pix(self.getcoords())
-        self.drbd.canvas.coords(self.ids[0], x0, y0, x1, y1)
+    def redraw(self, drbd):
+        x0, y0, x1, y1 = drbd.coord2pix(self.getcoords())
+        drbd.canvas.coords(self.ids[0], x0, y0, x1, y1)
         x0, y0, x1, y1, x2, y2, x3, y3 = self.get_rect_coords()
-        x0, y0, x1, y1, x2, y2, x3, y3 = self.drbd.coord2pix(np.array([x0,y0,x1,y1,x2,y2,x3,y3]))
-        self.drbd.canvas.coords(self.ids[1], x0, y0, x1, y1, x2, y2, x3, y3)
+        x0, y0, x1, y1, x2, y2, x3, y3 = drbd.coord2pix(np.array([x0,y0,x1,y1,x2,y2,x3,y3]))
+        drbd.canvas.coords(self.ids[1], x0, y0, x1, y1, x2, y2, x3, y3)
+        self.redrawbbox(drbd)
 
     def get_rect_coords(self):
         w = 0.6

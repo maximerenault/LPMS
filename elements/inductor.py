@@ -3,52 +3,52 @@ import numpy as np
 import tkinter as tk
 
 class Inductor(Wire):
-    def __init__(self, drbd, node1, node2, L) -> None:
-        super().__init__(drbd, node1, node2)
+    def __init__(self, node1, node2, L) -> None:
+        super().__init__(node1, node2)
         self.L = L
         self.w = 0.7
         self.h = 0.3
+        self.widths = [1,1,2,2,2]
     
-    def draw(self):
+    def draw(self, drbd):
         x0, y0, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7 = self.get_ind_coords()
-        x0, y0, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7 = self.drbd.coord2pix(np.array([x0,y0,x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6,x7,y7]))
-        x00, y00, x10, y10 = self.drbd.coord2pix(self.getcoords())
-        self.ids.append(self.drbd.canvas.create_line(x00, y00, x6, y6,
+        x0, y0, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7 = drbd.coord2pix(np.array([x0,y0,x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6,x7,y7]))
+        x00, y00, x10, y10 = drbd.coord2pix(self.getcoords())
+        self.ids.append(drbd.canvas.create_line(x00, y00, x6, y6,
                                                     tags="circuit"))
-        self.ids.append(self.drbd.canvas.create_line(x10, y10, x7, y7,
+        self.ids.append(drbd.canvas.create_line(x10, y10, x7, y7,
                                                     tags="circuit"))
-        self.ids.append(self.drbd.canvas.create_arc(x0, y0, x1, y1,
+        self.ids.append(drbd.canvas.create_arc(x0, y0, x1, y1,
                                                     width = 2,
-                                                    activewidth=3,
                                                     tags="circuit",
                                                     style=tk.ARC,
                                                     extent = 180))
-        self.ids.append(self.drbd.canvas.create_arc(x2, y2, x3, y3,
+        self.ids.append(drbd.canvas.create_arc(x2, y2, x3, y3,
                                                     width = 2,
-                                                    activewidth=3,
                                                     tags="circuit",
                                                     style=tk.ARC,
                                                     extent = 180))
-        self.ids.append(self.drbd.canvas.create_arc(x4, y4, x5, y5,
+        self.ids.append(drbd.canvas.create_arc(x4, y4, x5, y5,
                                                     width = 2,
-                                                    activewidth=3,
                                                     tags="circuit",
                                                     style=tk.ARC,
                                                     extent = 180))
+        self.drawbbox(drbd)
     
-    def redraw(self):
+    def redraw(self, drbd):
         x0, y0, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7 = self.get_ind_coords()
-        x0, y0, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7 = self.drbd.coord2pix(np.array([x0,y0,x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6,x7,y7]))
-        x00, y00, x10, y10 = self.drbd.coord2pix(self.getcoords())
+        x0, y0, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7 = drbd.coord2pix(np.array([x0,y0,x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6,x7,y7]))
+        x00, y00, x10, y10 = drbd.coord2pix(self.getcoords())
         angle = int(180*self.get_ind_angle()/np.pi)
-        self.drbd.canvas.coords(self.ids[0], x00, y00, x6, y6)
-        self.drbd.canvas.coords(self.ids[1], x10, y10, x7, y7)
-        self.drbd.canvas.coords(self.ids[2], x0, y0, x1, y1)
-        self.drbd.canvas.itemconfig(self.ids[2], start = angle)
-        self.drbd.canvas.coords(self.ids[3], x2, y2, x3, y3)
-        self.drbd.canvas.itemconfig(self.ids[3], start = angle)
-        self.drbd.canvas.coords(self.ids[4], x4, y4, x5, y5)
-        self.drbd.canvas.itemconfig(self.ids[4], start = angle)
+        drbd.canvas.coords(self.ids[0], x00, y00, x6, y6)
+        drbd.canvas.coords(self.ids[1], x10, y10, x7, y7)
+        drbd.canvas.coords(self.ids[2], x0, y0, x1, y1)
+        drbd.canvas.itemconfig(self.ids[2], start = angle)
+        drbd.canvas.coords(self.ids[3], x2, y2, x3, y3)
+        drbd.canvas.itemconfig(self.ids[3], start = angle)
+        drbd.canvas.coords(self.ids[4], x4, y4, x5, y5)
+        drbd.canvas.itemconfig(self.ids[4], start = angle)
+        self.redrawbbox(drbd)
 
     def get_ind_coords(self):
         w = self.w

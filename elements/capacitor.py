@@ -2,49 +2,51 @@ from elements.wire import Wire
 import numpy as np
 
 class Capacitor(Wire):
-    def __init__(self, drbd, node1, node2, C) -> None:
-        super().__init__(drbd, node1, node2)
+    def __init__(self, node1, node2, C) -> None:
+        super().__init__(node1, node2)
         self.C = C
         self.w = 0.2
         self.h = 0.6
+        self.widths = [2,2,1,1]
     
-    def draw(self):
+    def draw(self, drbd):
         x0, y0, x1, y1, x2, y2, x3, y3 = self.get_cap_coords()
         x01 = (x0+x3)/2
         y01 = (y0+y3)/2
         x11 = (x1+x2)/2
         y11 = (y1+y2)/2
-        x0, y0, x1, y1, x2, y2, x3, y3 = self.drbd.coord2pix(np.array([x0,y0,x1,y1,x2,y2,x3,y3]))
-        self.ids.append(self.drbd.canvas.create_line(x0, y0, x3, y3,
+        x0, y0, x1, y1, x2, y2, x3, y3 = drbd.coord2pix(np.array([x0,y0,x1,y1,x2,y2,x3,y3]))
+        self.ids.append(drbd.canvas.create_line(x0, y0, x3, y3,
                                                     width = 2,
-                                                    activewidth=3,
                                                     tags="circuit"))
-        self.ids.append(self.drbd.canvas.create_line(x1, y1, x2, y2,
+        self.ids.append(drbd.canvas.create_line(x1, y1, x2, y2,
                                                     width = 2,
-                                                    activewidth=3,
                                                     tags="circuit"))
         
-        x01, y01, x11, y11 = self.drbd.coord2pix(np.array([x01,y01,x11,y11]))
-        x00, y00, x10, y10 = self.drbd.coord2pix(self.getcoords())
-        self.ids.append(self.drbd.canvas.create_line(x00, y00, x01, y01,
+        x01, y01, x11, y11 = drbd.coord2pix(np.array([x01,y01,x11,y11]))
+        x00, y00, x10, y10 = drbd.coord2pix(self.getcoords())
+        self.ids.append(drbd.canvas.create_line(x00, y00, x01, y01,
                                                     tags="circuit"))
-        self.ids.append(self.drbd.canvas.create_line(x10, y10, x11, y11,
+        self.ids.append(drbd.canvas.create_line(x10, y10, x11, y11,
                                                     tags="circuit"))
+        self.drawbbox(drbd)
     
-    def redraw(self):
+    def redraw(self, drbd):
         x0, y0, x1, y1, x2, y2, x3, y3 = self.get_cap_coords()
         x01 = (x0+x3)/2
         y01 = (y0+y3)/2
         x11 = (x1+x2)/2
         y11 = (y1+y2)/2
-        x0, y0, x1, y1, x2, y2, x3, y3 = self.drbd.coord2pix(np.array([x0,y0,x1,y1,x2,y2,x3,y3]))
-        self.drbd.canvas.coords(self.ids[0], x0, y0, x3, y3)
-        self.drbd.canvas.coords(self.ids[1], x1, y1, x2, y2)
+        x0, y0, x1, y1, x2, y2, x3, y3 = drbd.coord2pix(np.array([x0,y0,x1,y1,x2,y2,x3,y3]))
+        drbd.canvas.coords(self.ids[0], x0, y0, x3, y3)
+        drbd.canvas.coords(self.ids[1], x1, y1, x2, y2)
 
-        x01, y01, x11, y11 = self.drbd.coord2pix(np.array([x01,y01,x11,y11]))
-        x00, y00, x10, y10 = self.drbd.coord2pix(self.getcoords())
-        self.drbd.canvas.coords(self.ids[2], x00, y00, x01, y01)
-        self.drbd.canvas.coords(self.ids[3], x10, y10, x11, y11)
+        x01, y01, x11, y11 = drbd.coord2pix(np.array([x01,y01,x11,y11]))
+        x00, y00, x10, y10 = drbd.coord2pix(self.getcoords())
+        drbd.canvas.coords(self.ids[2], x00, y00, x01, y01)
+        drbd.canvas.coords(self.ids[3], x10, y10, x11, y11)
+
+        self.redrawbbox(drbd)
 
     def get_cap_coords(self):
         w = self.w
