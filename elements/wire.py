@@ -1,17 +1,16 @@
 import numpy as np
-import json
 
 class Wire():
     def __init__(self, node1, node2) -> None:
         self.name = ''
+        self.nameid = -1
         self.nodes = [node1, node2]
         self.bbox = -1
         self.ids = []
         self.widths = [1]
-    
+
     def drawbbox(self, drbd):
-        x0, y0, x1, y1, x2, y2, x3, y3 = self.get_bbox_coords()
-        x0, y0, x1, y1, x2, y2, x3, y3 = drbd.coord2pix(np.array([x0,y0,x1,y1,x2,y2,x3,y3]))
+        x0, y0, x1, y1, x2, y2, x3, y3 = drbd.coord2pix(self.get_bbox_coords())
         self.bbox = drbd.canvas.create_polygon(x0, y0, x1, y1, x2, y2, x3, y3, 
                                                     fill="",
                                                     outline="",
@@ -21,20 +20,35 @@ class Wire():
         drbd.canvas.tag_bind(self.bbox, '<Leave>', lambda event,drbd=drbd : self.onElemHoverO(event,drbd))
 
     def redrawbbox(self, drbd):
-        x0, y0, x1, y1, x2, y2, x3, y3 = self.get_bbox_coords()
-        x0, y0, x1, y1, x2, y2, x3, y3 = drbd.coord2pix(np.array([x0,y0,x1,y1,x2,y2,x3,y3]))
+        x0, y0, x1, y1, x2, y2, x3, y3 = drbd.coord2pix(self.get_bbox_coords())
         drbd.canvas.coords(self.bbox, x0, y0, x1, y1, x2, y2, x3, y3)
+    
+    def drawname(self,drbd):
+        x0, y0, x1, y1 = drbd.coord2pix(self.getcoords())
+        x = (x0+x1)//2
+        y = (y0+y1)//2
+        self.nameid = drbd.canvas.create_text(x, y,
+                                                text=self.name,
+                                                tags="circuit")
+    
+    def redrawname(self,drbd):
+        x0, y0, x1, y1 = drbd.coord2pix(self.getcoords())
+        x = (x0+x1)//2
+        y = (y0+y1)//2
+        drbd.canvas.coords(self.nameid, x, y)
+        drbd.canvas.itemconfig(self.nameid, text=self.name)
 
     def draw(self, drbd):
         x0, y0, x1, y1 = drbd.coord2pix(self.getcoords())
         self.ids.append(drbd.canvas.create_line(x0, y0, x1, y1,
-                                                # activewidth=3,
                                                 tags="circuit"))
+        self.drawname(drbd)
         self.drawbbox(drbd)
     
     def redraw(self, drbd):
         x0, y0, x1, y1 = drbd.coord2pix(self.getcoords())
         drbd.canvas.coords(self.ids[0], x0, y0, x1, y1)
+        self.redrawname(drbd)
         self.redrawbbox(drbd)
 
     def getcoords(self):
@@ -77,6 +91,12 @@ class Wire():
         if drbd.drag_function == "Edit" :
             for id,w in zip(self.ids,self.widths) :
                 drbd.canvas.itemconfig(id,width=w)
+
+    def delete(self, drbd):
+        for id in self.ids :
+            drbd.canvas.delete(id)
+        drbd.canvas.delete(self.bbox)
+        drbd.canvas.delete(self.nameid)
 
     def __str__(self):
         return 'W'+str(self.ids[0])

@@ -166,6 +166,10 @@ class GridZoom(ttk.Frame):
             self.canvas.lift(id)
     
     def coord2pix(self, coordarray: np.ndarray):
+        '''
+        Takes coordinates in 2D array like [x0,y0,x1,y1,...]
+        and returns pixel coordinates array in same shape.
+        '''
         pixarray = np.zeros_like(coordarray, dtype=int)
         pixarray[0::2] = (coordarray[0::2]*self.pixgrid + self.x + self.dotsize//2).astype(int)
         pixarray[1::2] = (-coordarray[1::2]*self.pixgrid + self.y + self.dotsize//2).astype(int)

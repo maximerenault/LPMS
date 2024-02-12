@@ -33,6 +33,7 @@ class Inductor(Wire):
                                                     tags="circuit",
                                                     style=tk.ARC,
                                                     extent = 180))
+        self.drawname(drbd)
         self.drawbbox(drbd)
     
     def redraw(self, drbd):
@@ -48,6 +49,7 @@ class Inductor(Wire):
         drbd.canvas.itemconfig(self.ids[3], start = angle)
         drbd.canvas.coords(self.ids[4], x4, y4, x5, y5)
         drbd.canvas.itemconfig(self.ids[4], start = angle)
+        self.redrawname(drbd)
         self.redrawbbox(drbd)
 
     def get_ind_coords(self):

@@ -81,6 +81,7 @@ class DrawingBoard(GridZoom):
         if self.drag_function in self.drag_func_elems :
             node1 = Node(x0,y0)
             node2 = Node(x0,y0)
+
         if self.drag_function == "Wire" :
             elem = Wire(node1, node2)
         elif self.drag_function == "R" :
@@ -89,12 +90,12 @@ class DrawingBoard(GridZoom):
             elem = Capacitor(node1, node2, 10)
         elif self.drag_function == "L" :
             elem = Inductor(node1, node2, 10)
+
         if self.drag_function in self.drag_func_elems :
             elem.draw(self)
             node1.add_elem(elem)
             node2.add_elem(elem)
             self.cgraph.add_elem(elem)
-        print(self.cgraph.elems)
 
     def dr_move_to(self, event):
         '''
@@ -104,6 +105,7 @@ class DrawingBoard(GridZoom):
         if self.drag_function == "Move" :
             self.canvas.move("circuit", event.x - self.prevx, event.y - self.prevy)
             self.move_to(event)
+
         elif self.drag_function in self.drag_func_elems :
             x1, y1 = self.pix2coord(event.x, event.y)
             x1 = round(x1)
@@ -149,8 +151,9 @@ class DrawingBoard(GridZoom):
     
     def deleteElement(self, el_id):
         el = self.cgraph.elems[el_id]
-        for id in el.ids :
-            self.canvas.delete(id)
+        el.delete(self)
+        self.cgraph.del_elem(el_id)
+        del el
 
     def solve(self):
         self.cgraph.gen_connx()

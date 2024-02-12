@@ -37,6 +37,7 @@ class Attributes(ttk.Frame):
             return
         el = self.drbd.cgraph.elems[self.elem]
         el.name = self.namebox.get()
+        el.redrawname(self.drbd)
         
     def update_start(self, event):
         if self.elem == -1 :
@@ -70,7 +71,6 @@ class Attributes(ttk.Frame):
             self.disable_all()
             return
         self.drbd.deleteElement(self.elem)
-        self.drbd.cgraph.del_elem(self.elem)
         self.elem = -1
         self.clean_all()
         self.disable_all()

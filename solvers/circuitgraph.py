@@ -1,4 +1,5 @@
 from elements.node import Node
+from elements.ground import Ground
 import numpy as np
 from scipy.sparse.csgraph import connected_components
 from scipy.sparse import csr_matrix
@@ -17,7 +18,7 @@ class CircuitGraph() :
         Uses a binary search to insert new nodes
         in nodes list, or to find existing nodes.
         '''
-        for i in range(2):
+        for i in range(len(elem.nodes)):
             index, exists = self.binary_search_node(0,len(self.nodes)-1,elem.nodes[i])
             if exists :
                 for el in elem.nodes[i].elems :
@@ -36,6 +37,8 @@ class CircuitGraph() :
         self.connectivities = [0]*(n*(n-1)//2)
         for el_id in range(len(self.elems)) :
             elem = self.elems[el_id]
+            if isinstance(elem,Ground):
+                continue
             node1 = elem.nodes[0]
             node2 = elem.nodes[1]
             con1, _ = self.binary_search_node(0,len(self.nodes)-1,node1)
@@ -182,6 +185,6 @@ class CircuitGraph() :
             if exists and elem in self.nodes[index].elems :
                 self.nodes[index].elems.remove(elem)
                 l = len(self.nodes[index].elems)
-                if l==0 :
+                if l==0 : # If node has no connection, it can be deleted
                     self.nodes.pop(index)
         self.elems.remove(elem)
