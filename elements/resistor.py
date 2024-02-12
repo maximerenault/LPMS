@@ -11,8 +11,7 @@ class Resistor(Wire):
         x0, y0, x1, y1 = drbd.coord2pix(self.getcoords())
         self.ids.append(drbd.canvas.create_line(x0, y0, x1, y1,
                                                     tags="circuit"))
-        x0, y0, x1, y1, x2, y2, x3, y3 = self.get_rect_coords()
-        x0, y0, x1, y1, x2, y2, x3, y3 = drbd.coord2pix(np.array([x0,y0,x1,y1,x2,y2,x3,y3]))
+        x0, y0, x1, y1, x2, y2, x3, y3 = drbd.coord2pix(self.get_rect_coords())
         self.ids.append(drbd.canvas.create_polygon(x0, y0, x1, y1, x2, y2, x3, y3, 
                                                     fill="white",
                                                     outline="black",
@@ -24,8 +23,7 @@ class Resistor(Wire):
     def redraw(self, drbd):
         x0, y0, x1, y1 = drbd.coord2pix(self.getcoords())
         drbd.canvas.coords(self.ids[0], x0, y0, x1, y1)
-        x0, y0, x1, y1, x2, y2, x3, y3 = self.get_rect_coords()
-        x0, y0, x1, y1, x2, y2, x3, y3 = drbd.coord2pix(np.array([x0,y0,x1,y1,x2,y2,x3,y3]))
+        x0, y0, x1, y1, x2, y2, x3, y3 = drbd.coord2pix(self.get_rect_coords())
         drbd.canvas.coords(self.ids[1], x0, y0, x1, y1, x2, y2, x3, y3)
         self.redrawname(drbd)
         self.redrawbbox(drbd)

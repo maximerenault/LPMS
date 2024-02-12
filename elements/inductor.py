@@ -11,8 +11,7 @@ class Inductor(Wire):
         self.widths = [1,1,2,2,2]
     
     def draw(self, drbd):
-        x0, y0, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7 = self.get_ind_coords()
-        x0, y0, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7 = drbd.coord2pix(np.array([x0,y0,x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6,x7,y7]))
+        x0, y0, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7 = drbd.coord2pix(self.get_ind_coords())
         x00, y00, x10, y10 = drbd.coord2pix(self.getcoords())
         self.ids.append(drbd.canvas.create_line(x00, y00, x6, y6,
                                                     tags="circuit"))
@@ -37,8 +36,7 @@ class Inductor(Wire):
         self.drawbbox(drbd)
     
     def redraw(self, drbd):
-        x0, y0, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7 = self.get_ind_coords()
-        x0, y0, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7 = drbd.coord2pix(np.array([x0,y0,x1,y1,x2,y2,x3,y3,x4,y4,x5,y5,x6,y6,x7,y7]))
+        x0, y0, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7 = drbd.coord2pix(self.get_ind_coords())
         x00, y00, x10, y10 = drbd.coord2pix(self.getcoords())
         angle = int(180*self.get_ind_angle()/np.pi)
         drbd.canvas.coords(self.ids[0], x00, y00, x6, y6)

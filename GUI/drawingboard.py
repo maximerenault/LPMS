@@ -1,6 +1,7 @@
 from GUI.gridzoom import GridZoom
 from GUI.attributes import Attributes
 from elements.node import Node
+from elements.ground import Ground
 from elements.wire import Wire
 from elements.resistor import Resistor
 from elements.capacitor import Capacitor
@@ -27,8 +28,8 @@ class DrawingBoard(GridZoom):
         self.frameChoices.grid(row=2, column=0, pady=1)
         self.radiovalue = tk.StringVar()
         self.radiovalue.set("Move") #Default Select
-        self.drag_func_elems = ["Wire", "R", "C", "L"]
-        self.drag_functions = ["Move", "Edit", "Wire", "R", "C", "L"]
+        self.drag_func_elems = ["Wire", "R", "C", "L", "Gnd"]
+        self.drag_functions = ["Move", "Edit", "Wire", "R", "C", "L", "Gnd"]
         for fc in self.drag_functions:
             radio = tk.Radiobutton(self.frameChoices, text=fc, variable=self.radiovalue, value=fc, command=self.dragchanger).pack(side=tk.LEFT, padx=6,pady=3)
         self.drag_function = "Move"
@@ -76,22 +77,30 @@ class DrawingBoard(GridZoom):
         y0 = round(y0)
         for el in self.cgraph.elems[::-1] :
             if point_on_elem(el,x0,y0) :
-                _,_,x0,y0 = el.getcoords()
+                xs,ys,xe,ye = el.getcoords()
+                if xs == xe :
+                    if abs(ys-y0)<abs(ye-y0) : x0, y0 = xs, ys
+                    else :  x0, y0 = xe, ye
+                else :
+                    if abs(xs-x0)<abs(xe-x0) : x0, y0 = xs, ys
+                    else : x0, y0 = xe, ye
                 break
         if self.drag_function in self.drag_func_elems :
             node1 = Node(x0,y0)
             node2 = Node(x0,y0)
 
-        if self.drag_function == "Wire" :
-            elem = Wire(node1, node2)
-        elif self.drag_function == "R" :
-            elem = Resistor(node1, node2, 10)
-        elif self.drag_function == "C" :
-            elem = Capacitor(node1, node2, 10)
-        elif self.drag_function == "L" :
-            elem = Inductor(node1, node2, 10)
+            if self.drag_function == "Wire" :
+                elem = Wire(node1, node2)
+            elif self.drag_function == "R" :
+                elem = Resistor(node1, node2, 10)
+            elif self.drag_function == "C" :
+                elem = Capacitor(node1, node2, 10)
+            elif self.drag_function == "L" :
+                elem = Inductor(node1, node2, 10)
+            elif self.drag_function == "Gnd" :
+                node2 = Node(x0,y0-1)
+                elem = Ground(node1, node2)
 
-        if self.drag_function in self.drag_func_elems :
             elem.draw(self)
             node1.add_elem(elem)
             node2.add_elem(elem)
