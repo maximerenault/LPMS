@@ -22,7 +22,7 @@ class CircuitGraph() :
             index, exists = self.binary_search_node(0,len(self.nodes)-1,elem.nodes[i])
             if exists :
                 for el in elem.nodes[i].elems :
-                    self.nodes[index].elems.append(el)
+                    self.nodes[index].add_elem(el)
                 elem.nodes[i] = self.nodes[index]
             else :
                 self.nodes.insert(index, elem.nodes[i])
@@ -114,7 +114,7 @@ class CircuitGraph() :
     def show(self) -> None:
         return
     
-    def binary_search_node(self, low, high, node) -> (int, bool):
+    def binary_search_node(self, low, high, node) -> tuple[int, bool]:
         '''
         Returns the index of the node for insertion,
         or the index of the existing node if exists==True.
@@ -144,7 +144,7 @@ class CircuitGraph() :
             exists = False
         return index, exists
     
-    def binary_search_elem(self, low, high, elem) -> (int, bool):
+    def binary_search_elem(self, low, high, elem) -> tuple[int, bool]:
         '''
         Returns the index of the elem for insertion,
         or the index of the existing elem if exists==True.

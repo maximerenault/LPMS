@@ -2,6 +2,7 @@ from GUI.gridzoom import GridZoom
 from GUI.attributes import Attributes
 from elements.node import Node
 from elements.ground import Ground
+from elements.psource import PSource
 from elements.wire import Wire
 from elements.resistor import Resistor
 from elements.capacitor import Capacitor
@@ -28,8 +29,8 @@ class DrawingBoard(GridZoom):
         self.frameChoices.grid(row=2, column=0, pady=1)
         self.radiovalue = tk.StringVar()
         self.radiovalue.set("Move") #Default Select
-        self.drag_func_elems = ["Wire", "R", "C", "L", "Gnd"]
-        self.drag_functions = ["Move", "Edit", "Wire", "R", "C", "L", "Gnd"]
+        self.drag_func_elems = ["Wire", "R", "C", "L", "Gnd", "P"]
+        self.drag_functions = ["Move", "Edit", "Wire", "R", "C", "L", "Gnd", "P"]
         for fc in self.drag_functions:
             radio = tk.Radiobutton(self.frameChoices, text=fc, variable=self.radiovalue, value=fc, command=self.dragchanger).pack(side=tk.LEFT, padx=6,pady=3)
         self.drag_function = "Move"
@@ -100,10 +101,14 @@ class DrawingBoard(GridZoom):
             elif self.drag_function == "Gnd" :
                 node2 = Node(x0,y0-1)
                 elem = Ground(node1, node2)
+            elif self.drag_function == "P" :
+                node2 = Node(x0,y0-1)
+                elem = PSource(node1, node2, np.sin)
 
             elem.draw(self)
             node1.add_elem(elem)
-            node2.add_elem(elem)
+            if not isinstance(elem,Ground):
+                node2.add_elem(elem)
             self.cgraph.add_elem(elem)
 
     def dr_move_to(self, event):
