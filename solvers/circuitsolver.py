@@ -1,5 +1,4 @@
-
-class CircuitSolver():
+class CircuitSolver:
     def __init__(self, elems, nodes) -> None:
         self.elems = elems
         self.nodes = nodes
