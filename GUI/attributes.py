@@ -1,4 +1,3 @@
-from matplotlib import tight_layout
 from utils.io import readvalues
 import numpy as np
 import scipy as sp
@@ -13,7 +12,6 @@ from elements.inductor import Inductor
 from elements.ground import Ground
 from elements.psource import PSource
 import matplotlib
-import matplotlib.pyplot as plt
 
 matplotlib.use("TkAgg")
 
@@ -62,6 +60,10 @@ class Attributes(ttk.Frame):
         self.elem = -1
 
     def update_name(self, event):
+        """
+        Update name of the object and
+        display it
+        """
         if self.elem == -1:
             self.update_attributes()
             return
@@ -70,6 +72,10 @@ class Attributes(ttk.Frame):
         el.redrawname(self.drbd)
 
     def update_coords(self, event, widget):
+        """
+        Update start or end coords of the object
+        with id self.elem
+        """
         if self.elem == -1:
             self.update_attributes()
             return
@@ -80,7 +86,7 @@ class Attributes(ttk.Frame):
             x = int(xy[0])
             y = int(xy[1])
             if widget == "start":
-                el.nodes[0].setcoords(x, y)
+                el.setstart(x, y)
             elif widget == "end":
                 el.setend(x, y)
             else:
@@ -91,6 +97,9 @@ class Attributes(ttk.Frame):
             print("Error with " + widget + " coords")
 
     def update_value(self, event):
+        """
+        Update value for dipole elements
+        """
         if self.elem == -1:
             self.update_attributes()
             return
@@ -103,6 +112,9 @@ class Attributes(ttk.Frame):
             print("Error with value input")
 
     def update_period(self, event):
+        """
+        Update period for source elements
+        """
         if self.elem == -1:
             self.update_attributes()
             return
@@ -115,15 +127,24 @@ class Attributes(ttk.Frame):
             print("Error with period input")
 
     def read_values(self):
-        file_io = tk.filedialog.askopenfilename()
-        if file_io:
-            x, y = readvalues(file_io)
+        """
+        Allows for opening a csv file
+        with columns time and value,
+        with sep='\t'
+        """
+        file_name = tk.filedialog.askopenfilename()
+        if file_name:
+            x, y = readvalues(file_name)
             el = self.drbd.cgraph.elems[self.elem]
             source = sp.interpolate.CubicSpline(x, y, extrapolate="periodic")
             el.set_source(source)
             self.update_attributes()
 
     def delete_elem(self):
+        """
+        Calls deleteElement from the
+        drawing board and resets attributes
+        """
         if self.elem == -1:
             self.update_attributes()
             return

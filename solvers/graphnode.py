@@ -1,14 +1,20 @@
-class GraphNode:
-    def __init__(self, elems) -> None:
-        self.elems = elems
+from solvers.graphedge import GraphEdge
 
-    def add_elem(self, elem):
-        self.elems.append(elem)
+
+types = ["Normal","Source"]
+
+class GraphNode:
+    def __init__(self, type:str="Normal") -> None:
+        self.edges = []
+        self.type = type
+
+    def add_edge(self, edge:GraphEdge):
+        self.edges.append(edge)
 
     def __str__(self):
         lastr = "GN["
-        for elem in self.elems:
-            lastr += str(elem) + ", "
+        for edge in self.edges:
+            lastr += str(edge) + ", "
         lastr += "]"
         return lastr
 

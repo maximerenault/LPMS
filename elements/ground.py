@@ -30,8 +30,9 @@ class Ground(Wire):
         vec = coords[2:] - coords[:2]
         l = np.linalg.norm(vec)
         if l == 0:
-            vec = np.array([0, -1])
-            l = 1
+            return np.concatenate(
+                (coords[:2], coords[:2], coords[:2], coords[:2], coords[:2], coords[:2], coords[:2], coords[:2])
+            )
         vec = vec / l
         w = 0.2
         h = 0.6
@@ -51,10 +52,10 @@ class Ground(Wire):
         x0, y0, _, _ = self.getcoords()
         l = np.sqrt((x - x0) ** 2 + (y - y0) ** 2)
         if l == 0:
-            self.nodes[1].setcoords(x0, y0 - 1)
+            self.nodes[1].setcoords(x0, y0)
         else:
-            x = x0 + round((x - x0) / l)
-            y = y0 + round((y - y0) / l)
+            x = x0 + round((x - x0) / l)/2
+            y = y0 + round((y - y0) / l)/2
             self.nodes[1].setcoords(x, y)
 
     def __str__(self):

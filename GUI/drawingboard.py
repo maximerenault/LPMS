@@ -1,5 +1,6 @@
 from GUI.gridzoom import GridZoom
 from GUI.attributes import Attributes
+from GUI.framesolve import FrameSolve
 from elements.node import Node
 from elements.ground import Ground
 from elements.psource import PSource
@@ -8,9 +9,10 @@ from elements.resistor import Resistor
 from elements.capacitor import Capacitor
 from elements.inductor import Inductor
 from solvers.circuitgraph import CircuitGraph
+from solvers.circuitsolver import CircuitSolver
 from utils.geometry import *
 import tkinter as tk
-from tkinter import ttk
+from tkinter import Frame, ttk
 import pickle
 
 
@@ -43,18 +45,26 @@ class DrawingBoard(GridZoom):
         self.prevdragx = 0
         self.prevdragy = 0
 
+        self.cgraph = CircuitGraph()
+        self.csolver = CircuitSolver()
+
         self.frameAttr = Attributes(self.master, self)
         self.frameAttr.grid(row=0, column=1, pady=1)
         self.selected_elem = -1
 
-        self.frameSolve = ttk.Frame(self.master)
-        self.frameSolve.grid(row=2, column=1, pady=1)
-        self.solvebutton = ttk.Button(self.frameSolve, command=self.solve, text="Solve").pack(
+        self.frameSolve = FrameSolve(self.master, self)
+
+        self.frameSolveSaveLoad = ttk.Frame(self.master)
+        self.frameSolveSaveLoad.grid(row=2, column=1, pady=1)
+        self.presolvebutton = ttk.Button(self.frameSolveSaveLoad, command=self.presolve, text="Pre-Solve").pack(
             side=tk.LEFT, padx=6, pady=3
         )
-        self.savebutton = ttk.Button(self.frameSolve, command=self.save, text="Save").pack(side=tk.LEFT, padx=6, pady=3)
-        self.loadbutton = ttk.Button(self.frameSolve, command=self.load, text="Load").pack(side=tk.LEFT, padx=6, pady=3)
-        self.cgraph = CircuitGraph()
+        self.savebutton = ttk.Button(self.frameSolveSaveLoad, command=self.save, text="Save").pack(
+            side=tk.LEFT, padx=6, pady=3
+        )
+        self.loadbutton = ttk.Button(self.frameSolveSaveLoad, command=self.load, text="Load").pack(
+            side=tk.LEFT, padx=6, pady=3
+        )
 
     def dr_resize(self, event):
         """
@@ -84,20 +94,8 @@ class DrawingBoard(GridZoom):
         x0, y0 = self.pix2coord(self.prevx, self.prevy)
         x0 = round(x0)
         y0 = round(y0)
-        for el in self.cgraph.elems[::-1]:
-            if point_on_elem(el, x0, y0):
-                xs, ys, xe, ye = el.getcoords()
-                if xs == xe:
-                    if abs(ys - y0) < abs(ye - y0):
-                        x0, y0 = xs, ys
-                    else:
-                        x0, y0 = xe, ye
-                else:
-                    if abs(xs - x0) < abs(xe - x0):
-                        x0, y0 = xs, ys
-                    else:
-                        x0, y0 = xe, ye
-                break
+        x0, y0, eldir = start_from_elem(self, x0, y0)
+
         if self.drag_function in self.drag_func_elems:
             node1 = Node(x0, y0)
             node2 = Node(x0, y0)
@@ -111,12 +109,11 @@ class DrawingBoard(GridZoom):
             elif self.drag_function == "L":
                 elem = Inductor(node1, node2, 10)
             elif self.drag_function == "Gnd":
-                node2 = Node(x0, y0 - 1)
                 elem = Ground(node1, node2)
             elif self.drag_function == "P":
-                node2 = Node(x0, y0 - 1)
                 elem = PSource(node1, node2, lambda x: np.sin(x * 2 * np.pi))
 
+            elem_init_pos(self, elem, eldir + 2)
             elem.draw(self)
             node1.add_elem(elem)
             node2.add_elem(elem)
@@ -155,13 +152,13 @@ class DrawingBoard(GridZoom):
         Function for releasing left MB
         """
         if self.drag_function in self.drag_func_elems:
-            self.frameAttr.change_elem(len(self.cgraph.elems) - 1)
             elem = self.cgraph.elems[-1]
             coords = elem.getcoords()
             if coords[0] == coords[2] and coords[1] == coords[3]:
                 self.cgraph.del_elem(-1)
             else:
                 self.cgraph.add_elem_nodes(elem)
+                self.frameAttr.change_elem(len(self.cgraph.elems) - 1)
 
     def dr_wheel(self, event):
         """
@@ -174,6 +171,9 @@ class DrawingBoard(GridZoom):
 
     def dragchanger(self, event=None):
         self.drag_function = self.radiovalue.get()  # selected radio value
+        if self.drag_function in self.drag_functions[1:]:
+            self.frameSolve.grid_forget()
+            self.frameAttr.grid(row=0, column=1, pady=1)
 
     def deleteElement(self, el_id):
         el = self.cgraph.elems[el_id]
@@ -181,8 +181,17 @@ class DrawingBoard(GridZoom):
         self.cgraph.del_elem(el_id)
         del el
 
-    def solve(self):
-        self.cgraph.gen_connx()
+    def presolve(self):
+        if len(self.cgraph.nodes) == 0:
+            tk.messagebox.showerror("Error", "No system to solve")
+            return
+        conn_comp = self.cgraph.gen_connx()
+        if conn_comp != 1:
+            tk.messagebox.showerror("Error", "Too many connected components in graph")
+            return
+        self.frameAttr.grid_forget()
+        self.frameSolve.grid(row=0, column=1, pady=1)
+        self.frameSolve.update_framesolve()
         self.cgraph.show()
 
     def save(self):

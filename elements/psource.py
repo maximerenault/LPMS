@@ -29,8 +29,7 @@ class PSource(Ground):
         vec = coords[2:] - coords[:2]
         l = np.linalg.norm(vec)
         if l == 0:
-            vec = np.array([0, -1])
-            l = 1
+            return np.concatenate((coords[:2], coords[:2], coords[:2], coords[:2]))
         vec = vec / l
         w = 0.5
         h = 0.5

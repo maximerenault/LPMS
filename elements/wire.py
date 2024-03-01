@@ -66,6 +66,9 @@ class Wire:
         p3 = mid - w / 2 * vec - h / 2 * vor
         return np.concatenate((p0, p1, p2, p3))
 
+    def setstart(self, x, y):
+        self.nodes[0].setcoords(x, y)
+
     def setend(self, x, y):
         self.nodes[1].setcoords(x, y)
 
