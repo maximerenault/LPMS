@@ -54,8 +54,8 @@ class Ground(Wire):
         if l == 0:
             self.nodes[1].setcoords(x0, y0)
         else:
-            x = x0 + round((x - x0) / l)/2
-            y = y0 + round((y - y0) / l)/2
+            x = x0 + round((x - x0) / l)*0.75
+            y = y0 + round((y - y0) / l)*0.75
             self.nodes[1].setcoords(x, y)
 
     def __str__(self):

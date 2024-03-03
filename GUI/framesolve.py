@@ -24,8 +24,9 @@ class FrameSolve(ttk.Frame):
         self.associated_widgets = {
             "solver": [
                 "timestep",
+                "max time",
                 "time integration",
-                #   "conn_mat",
+                # "conn_mat",
                 "Solve",
                 "Export matrices",
             ]
@@ -33,6 +34,7 @@ class FrameSolve(ttk.Frame):
 
         self.entry_options = {
             "timestep": {"bg": "light yellow", "bindfunc": self.update_timestep},
+            "max time": {"bg": "light yellow", "bindfunc": self.update_maxtime},
         }
 
         self.cbbox_options = {
@@ -45,7 +47,7 @@ class FrameSolve(ttk.Frame):
 
         self.button_options = {
             "Solve": {"text": "Solve", "bindfunc": self.solve},
-            "Export matrices": {"text": "Delete", "bindfunc": self.export_matrices},
+            "Export matrices": {"text": "Export matrices", "bindfunc": self.export_matrices},
         }
 
         self.status = tk.StringVar()
@@ -62,6 +64,13 @@ class FrameSolve(ttk.Frame):
         dt = float(self.entries["timestep"].get())
         self.drbd.csolver.set_dt(dt)
 
+    def update_maxtime(self, event):
+        """
+        Update max time of simulation
+        """
+        maxtime = float(self.entries["max time"].get())
+        self.drbd.csolver.set_maxtime(maxtime)
+
     def update_time_integration(self, event):
         """
         Update time integration scheme
@@ -69,6 +78,16 @@ class FrameSolve(ttk.Frame):
         self.drbd.csolver.set_time_integration(self.comboboxes["time integration"].get())
 
     def solve(self):
+        Paths, StartEnds = self.drbd.cgraph.graph_max_len_non_branching_paths()
+        nbQ = len(Paths)
+        nbP = len([n for n in self.drbd.cgraph.graph_nodes if n.type != "Source"])
+        cns = self.drbd.csolver.solve(nbP, nbQ, self.drbd.cgraph.graph_nodes, Paths, StartEnds)
+        if cns == 1:
+            tk.messagebox.showerror("Error", "The problem is under constrained, add a source")
+            return
+        if cns == 2:
+            tk.messagebox.showerror("Error", "The problem is over constrained, remove a source")
+            return
         return
 
     def export_matrices(self):
@@ -115,6 +134,8 @@ class FrameSolve(ttk.Frame):
                 # Fill the widget with element attributes
                 if widget == "timestep":
                     arg_entry.insert(tk.END, csolver.get_dt())
+                elif widget == "max time":
+                    arg_entry.insert(tk.END, csolver.get_maxtime())
 
                 self.labels[widget] = arg_label  # Store label in dictionary
                 self.entries[widget] = arg_entry  # Store entry in dictionary
@@ -137,32 +158,33 @@ class FrameSolve(ttk.Frame):
                 matplotlib.rc("font", **font)
                 f = Figure(figsize=(2, 1.5), dpi=self.plot_options[widget]["dpi"], tight_layout=True)
                 subplot = f.add_subplot(111)
-                Graph = nx.from_numpy_array(self.drbd.cgraph.conn_mat)
-                nx.draw_networkx(
-                    Graph,
-                    edge_color=tuple(
-                        (
-                            "silver"
-                            if Graph[u][v]["weight"] == 1
-                            else (
-                                "red"
-                                if Graph[u][v]["weight"] == 2
-                                else (
-                                    "indigo"
-                                    if Graph[u][v]["weight"] == 3
-                                    else (
-                                        "coral"
-                                        if Graph[u][v]["weight"] == 4
-                                        else "goldenrod" if Graph[u][v]["weight"] == 6 else "pink"
-                                    )
-                                )
-                            )
-                        )
-                        for u, v in Graph.edges()
-                    ),
-                    width=3,
-                    ax=subplot,
-                )
+                subplot.matshow(self.drbd.cgraph.conn_mat)
+                # Graph = nx.from_numpy_array(self.drbd.cgraph.conn_mat)
+                # nx.draw_networkx(
+                #     Graph,
+                #     edge_color=tuple(
+                #         (
+                #             "silver"
+                #             if Graph[u][v]["weight"] == 1
+                #             else (
+                #                 "red"
+                #                 if Graph[u][v]["weight"] == 2
+                #                 else (
+                #                     "indigo"
+                #                     if Graph[u][v]["weight"] == 3
+                #                     else (
+                #                         "coral"
+                #                         if Graph[u][v]["weight"] == 4
+                #                         else "goldenrod" if Graph[u][v]["weight"] == 6 else "pink"
+                #                     )
+                #                 )
+                #             )
+                #         )
+                #         for u, v in Graph.edges()
+                #     ),
+                #     width=3,
+                #     ax=subplot,
+                # )
                 arg_canv = FigureCanvasTkAgg(f, self)
                 arg_canv.draw()
                 arg_canv.get_tk_widget().grid(row=row, column=1, sticky="we")

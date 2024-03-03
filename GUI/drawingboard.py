@@ -185,14 +185,16 @@ class DrawingBoard(GridZoom):
         if len(self.cgraph.nodes) == 0:
             tk.messagebox.showerror("Error", "No system to solve")
             return
-        conn_comp = self.cgraph.gen_connx()
+        conn_comp = self.cgraph.pre_solve()
         if conn_comp != 1:
             tk.messagebox.showerror("Error", "Too many connected components in graph")
+            return
+        if len(self.cgraph.graph_conn_mat) == 1:
+            tk.messagebox.showerror("Error", "Isolated node in the graph (short-circuit)")
             return
         self.frameAttr.grid_forget()
         self.frameSolve.grid(row=0, column=1, pady=1)
         self.frameSolve.update_framesolve()
-        self.cgraph.show()
 
     def save(self):
         file = open("save.pkl", "wb")

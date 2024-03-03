@@ -1,15 +1,14 @@
-from solvers.graphnode import GraphNode
+from elements.wire import Wire
 
 
 class GraphEdge:
-    def __init__(self, start: GraphNode, end: GraphNode, type:str="R", value:float=1.0) -> None:
+    def __init__(self, start: int, end: int, elem: Wire) -> None:
         self.start = start
         self.end = end
-        self.type = type
-        self.value = value
+        self.elem = elem
 
     def __str__(self):
-        lastr = "GE["+str(self.start)+","+str(self.end)+"]"
+        lastr = "GE[" + str(self.start) + "," + str(self.end) + "]"
         return lastr
 
     def __repr__(self):
