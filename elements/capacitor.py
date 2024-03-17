@@ -3,9 +3,8 @@ import numpy as np
 
 
 class Capacitor(Wire):
-    def __init__(self, node1, node2, C) -> None:
-        super().__init__(node1, node2)
-        self.C = C
+    def __init__(self, node1, node2, C, active: bool = False) -> None:
+        super().__init__(node1, node2, C, active)
         self.w = 0.2
         self.h = 0.6
         self.widths = [2, 2, 1, 1]
@@ -61,12 +60,6 @@ class Capacitor(Wire):
         p2 = mid + w / 2 * vec - h / 2 * vor
         p3 = mid - w / 2 * vec - h / 2 * vor
         return np.concatenate((p0, p1, p2, p3))
-
-    def set_value(self, C):
-        self.C = C
-
-    def get_value(self):
-        return self.C
 
     def __str__(self):
         return "C" + str(self.ids[0])

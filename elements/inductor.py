@@ -4,9 +4,8 @@ import tkinter as tk
 
 
 class Inductor(Wire):
-    def __init__(self, node1, node2, L) -> None:
-        super().__init__(node1, node2)
-        self.L = L
+    def __init__(self, node1, node2, L, active=False) -> None:
+        super().__init__(node1, node2, L, active)
         self.w = 0.7
         self.h = 0.3
         self.widths = [1, 1, 2, 2, 2]
@@ -14,11 +13,12 @@ class Inductor(Wire):
     def draw(self, drbd):
         x0, y0, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7 = drbd.coord2pix(self.get_ind_coords())
         x00, y00, x10, y10 = drbd.coord2pix(self.getcoords())
+        angle = int(180 * self.get_ind_angle() / np.pi)
         self.ids.append(drbd.canvas.create_line(x00, y00, x6, y6, tags="circuit"))
         self.ids.append(drbd.canvas.create_line(x10, y10, x7, y7, tags="circuit"))
-        self.ids.append(drbd.canvas.create_arc(x0, y0, x1, y1, width=2, tags="circuit", style=tk.ARC, extent=180))
-        self.ids.append(drbd.canvas.create_arc(x2, y2, x3, y3, width=2, tags="circuit", style=tk.ARC, extent=180))
-        self.ids.append(drbd.canvas.create_arc(x4, y4, x5, y5, width=2, tags="circuit", style=tk.ARC, extent=180))
+        self.ids.append(drbd.canvas.create_arc(x0, y0, x1, y1, width=2, tags="circuit", style=tk.ARC, extent=180, start=angle))
+        self.ids.append(drbd.canvas.create_arc(x2, y2, x3, y3, width=2, tags="circuit", style=tk.ARC, extent=180, start=angle))
+        self.ids.append(drbd.canvas.create_arc(x4, y4, x5, y5, width=2, tags="circuit", style=tk.ARC, extent=180, start=angle))
         self.drawname(drbd)
         self.drawbbox(drbd)
 
@@ -67,12 +67,6 @@ class Inductor(Wire):
             return -np.pi / 2
         angle = np.arctan((y1 - y0) / (x1 - x0))
         return angle
-
-    def set_value(self, L):
-        self.L = L
-
-    def get_value(self):
-        return self.L
 
     def __str__(self):
         return "L" + str(self.ids[0])

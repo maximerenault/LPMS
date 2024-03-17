@@ -1,14 +1,19 @@
 import numpy as np
+from exceptions.elementsexceptions import *
 
 
 class Wire:
-    def __init__(self, node1, node2) -> None:
+    def __init__(self, node1, node2, value: float | str | None = None, active: bool = False) -> None:
         self.name = ""
         self.nameid = -1
         self.nodes = [node1, node2]
         self.bbox = -1
         self.ids = []
         self.widths = [1]
+
+        # Useful for elements with value
+        self.active = active
+        self.set_value(value)
 
     def drawbbox(self, drbd):
         x0, y0, x1, y1, x2, y2, x3, y3 = drbd.coord2pix(self.get_bbox_coords())
@@ -46,9 +51,6 @@ class Wire:
         self.redrawname(drbd)
         self.redrawbbox(drbd)
 
-    def getcoords(self):
-        return np.concatenate((self.nodes[0].getcoords(), self.nodes[1].getcoords()))
-
     def get_bbox_coords(self):
         coords = self.getcoords()
         vec = coords[2:] - coords[:2]
@@ -65,6 +67,9 @@ class Wire:
         p2 = mid + w / 2 * vec - h / 2 * vor
         p3 = mid - w / 2 * vec - h / 2 * vor
         return np.concatenate((p0, p1, p2, p3))
+
+    def getcoords(self):
+        return np.concatenate((self.nodes[0].getcoords(), self.nodes[1].getcoords()))
 
     def setstart(self, x, y):
         self.nodes[0].setcoords(x, y)
@@ -101,3 +106,30 @@ class Wire:
 
     def __repr__(self):
         return str(self)
+
+    def set_value(self, value):
+        if not self.active and not (isinstance(value, float) or value == None):
+            try:
+                value = float(value)
+            except:
+                raise BadValueTypeError(type(value), float)
+        if self.active and not (isinstance(value, str) or value == None):
+            raise BadValueTypeError(type(value), str)
+        self.value = value
+        # source = sp.interpolate.CubicSpline(x, y, extrapolate="periodic")
+        # self.source = source
+
+    def get_value(self):
+        return self.value
+
+    def set_name(self, name: str):
+        self.name = name
+
+    def to_dict(self, nodes_list: list) -> dict:
+        my_dict = {}
+        my_dict["type"] = self.__class__.__name__
+        my_dict["name"] = self.name
+        my_dict["nodes"] = [nodes_list.index(self.nodes[0]), nodes_list.index(self.nodes[1])]
+        my_dict["active"] = self.active
+        my_dict["value"] = self.get_value()
+        return my_dict

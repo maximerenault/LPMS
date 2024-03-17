@@ -1,19 +1,19 @@
 import numpy as np
+import scipy as sp
 from elements.ground import Ground
-import tkinter as tk
+from elements.node import Node
 
 
 class PSource(Ground):
-    def __init__(self, node1, node2, P) -> None:
-        super().__init__(node1, node2)
-        self.source = P
-        self.period = 1.0
+    def __init__(self, node1: Node, node2: Node, value: float | str | None = None, active: bool = False) -> None:
+        super().__init__(node1, node2, value, active)
+        self.name = "P"
         self.widths = [1, 2]
 
     def draw(self, drbd):
         xs, ys, xe, ye, x1, y1, x2, y2 = drbd.coord2pix(self.get_psource_coords())
-        self.ids.append(drbd.canvas.create_line(xs, ys, xe, ye, tags="circuit"))
-        self.ids.append(drbd.canvas.create_oval(x1, y1, x2, y2, width=2, tags="circuit"))
+        self.ids.append(drbd.canvas.create_line(xs, ys, xe, ye, width=self.widths[0], tags="circuit"))
+        self.ids.append(drbd.canvas.create_oval(x1, y1, x2, y2, width=self.widths[1], tags="circuit"))
         self.drawname(drbd)
         self.drawbbox(drbd)
 
@@ -43,17 +43,19 @@ class PSource(Ground):
         p3 = mid + w / 2 * diagx + h / 2 * diagy
         return np.concatenate((p0, p1, p2, p3))
 
-    def set_source(self, source):
-        self.source = source
+    # def set_value(self, x: np.ndarray, y: np.ndarray):
+    #     self.value = np.array([x, y])
+    #     source = sp.interpolate.CubicSpline(x, y, extrapolate="periodic")
+    #     self.source = source
 
-    def get_source(self):
-        return self.source
+    # def get_value(self):
+    #     return self.value
 
-    def set_period(self, period: float):
-        self.period = period
+    # def set_source(self, source: function):
+    #     self.source = source
 
-    def get_period(self):
-        return self.period
+    # def get_source(self):
+    #     return self.source
 
     def __str__(self):
         return "PSc" + str(self.ids[0])

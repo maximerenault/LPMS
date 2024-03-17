@@ -1,9 +1,11 @@
+import json
 from GUI.gridzoom import GridZoom
-from GUI.attributes import Attributes
+from GUI.frameattributes import FrameAttributes
 from GUI.framesolve import FrameSolve
 from elements.node import Node
 from elements.ground import Ground
 from elements.psource import PSource
+from elements.qsource import QSource
 from elements.wire import Wire
 from elements.resistor import Resistor
 from elements.capacitor import Capacitor
@@ -13,30 +15,31 @@ from solvers.circuitsolver import CircuitSolver
 from utils.geometry import *
 import tkinter as tk
 from tkinter import Frame, ttk
-import pickle
+
+from utils.io import loadfromjson, savetojson
 
 
 class DrawingBoard(GridZoom):
     def __init__(self, mainframe):
         GridZoom.__init__(self, mainframe)
         # Bind events to the Canvas
-        self.canvas.bind("<Configure>", self.dr_resize)  # canvas is resized
-        self.canvas.bind("<ButtonPress-1>", self.dr_move_from)
-        self.canvas.bind("<ButtonRelease-1>", self.dr_release)
-        self.canvas.bind("<B1-Motion>", self.dr_move_to)
+        self.canvas.bind("<Configure>", self.db_resize)  # canvas is resized
+        self.canvas.bind("<ButtonPress-1>", self.db_move_from)
+        self.canvas.bind("<ButtonRelease-1>", self.db_release)
+        self.canvas.bind("<B1-Motion>", self.db_move_to)
         # with Windows and MacOS, but not Linux
-        self.canvas.bind("<MouseWheel>", self.dr_wheel)
+        self.canvas.bind("<MouseWheel>", self.db_wheel)
         # only with Linux, wheel scroll down
-        self.canvas.bind("<Button-5>", self.dr_wheel)
+        self.canvas.bind("<Button-5>", self.db_wheel)
         # only with Linux, wheel scroll up
-        self.canvas.bind("<Button-4>", self.dr_wheel)
+        self.canvas.bind("<Button-4>", self.db_wheel)
 
         self.frameChoices = ttk.Frame(self.master)
         self.frameChoices.grid(row=2, column=0, pady=1)
         self.radiovalue = tk.StringVar()
         self.radiovalue.set("Move")  # Default Select
-        self.drag_func_elems = ["Wire", "R", "C", "L", "Gnd", "P"]
-        self.drag_functions = ["Move", "Edit", "Wire", "R", "C", "L", "Gnd", "P"]
+        self.drag_func_elems = ["Wire", "R", "C", "L", "Gnd", "P", "Q"]
+        self.drag_functions = ["Move", "Edit", "Wire", "R", "C", "L", "Gnd", "P", "Q"]
         for fc in self.drag_functions:
             radio = tk.Radiobutton(
                 self.frameChoices, text=fc, variable=self.radiovalue, value=fc, command=self.dragchanger
@@ -48,17 +51,22 @@ class DrawingBoard(GridZoom):
         self.cgraph = CircuitGraph()
         self.csolver = CircuitSolver()
 
-        self.frameAttr = Attributes(self.master, self)
-        self.frameAttr.grid(row=0, column=1, pady=1)
-        self.selected_elem = -1
+        self.tabControl = ttk.Notebook(self.master)
 
-        self.frameSolve = FrameSolve(self.master, self)
+        self.frameAttr = FrameAttributes(self.tabControl, self)
+        self.frameAttr.grid(row=0, column=0, pady=1)
+        self.frameSolve = FrameSolve(self.tabControl, self)
+        self.frameSolve.grid(row=0, column=0, pady=1)
+
+        self.tabControl.add(self.frameAttr, text="Attributes")
+        self.tabControl.add(self.frameSolve, text="Solver")
+        self.tabControl.grid(row=0, column=1, pady=1, sticky="nsew")
 
         self.frameSolveSaveLoad = ttk.Frame(self.master)
         self.frameSolveSaveLoad.grid(row=2, column=1, pady=1)
-        self.presolvebutton = ttk.Button(self.frameSolveSaveLoad, command=self.presolve, text="Pre-Solve").pack(
-            side=tk.LEFT, padx=6, pady=3
-        )
+        # self.presolvebutton = ttk.Button(self.frameSolveSaveLoad, command=self.presolve, text="Pre-Solve").pack(
+        #     side=tk.LEFT, padx=6, pady=3
+        # )
         self.savebutton = ttk.Button(self.frameSolveSaveLoad, command=self.save, text="Save").pack(
             side=tk.LEFT, padx=6, pady=3
         )
@@ -66,7 +74,7 @@ class DrawingBoard(GridZoom):
             side=tk.LEFT, padx=6, pady=3
         )
 
-    def dr_resize(self, event):
+    def db_resize(self, event):
         """
         Resizing the window and
         redrawing everything
@@ -74,7 +82,7 @@ class DrawingBoard(GridZoom):
         dx, dy = self.resize()
         self.canvas.move("circuit", dx, dy)
 
-    def dr_move_from(self, event):
+    def db_move_from(self, event):
         """
         Function for first press
         of left MB
@@ -111,7 +119,9 @@ class DrawingBoard(GridZoom):
             elif self.drag_function == "Gnd":
                 elem = Ground(node1, node2)
             elif self.drag_function == "P":
-                elem = PSource(node1, node2, lambda x: np.sin(x * 2 * np.pi))
+                elem = PSource(node1, node2, "sin(t)", True)
+            elif self.drag_function == "Q":
+                elem = QSource(node1, node2, "cos(t)", True)
 
             elem_init_pos(self, elem, eldir + 2)
             elem.draw(self)
@@ -119,7 +129,7 @@ class DrawingBoard(GridZoom):
             node2.add_elem(elem)
             self.cgraph.add_elem(elem)
 
-    def dr_move_to(self, event):
+    def db_move_to(self, event):
         """
         Function for moving mouse
         while pressing left MB
@@ -147,7 +157,7 @@ class DrawingBoard(GridZoom):
                 elem.redraw(self)
                 self.show_frontground(event)
 
-    def dr_release(self, event):
+    def db_release(self, event):
         """
         Function for releasing left MB
         """
@@ -160,7 +170,7 @@ class DrawingBoard(GridZoom):
                 self.cgraph.add_elem_nodes(elem)
                 self.frameAttr.change_elem(len(self.cgraph.elems) - 1)
 
-    def dr_wheel(self, event):
+    def db_wheel(self, event):
         """
         Function for rolling the
         mouse wheel
@@ -171,9 +181,6 @@ class DrawingBoard(GridZoom):
 
     def dragchanger(self, event=None):
         self.drag_function = self.radiovalue.get()  # selected radio value
-        if self.drag_function in self.drag_functions[1:]:
-            self.frameSolve.grid_forget()
-            self.frameAttr.grid(row=0, column=1, pady=1)
 
     def deleteElement(self, el_id):
         el = self.cgraph.elems[el_id]
@@ -181,31 +188,38 @@ class DrawingBoard(GridZoom):
         self.cgraph.del_elem(el_id)
         del el
 
-    def presolve(self):
-        if len(self.cgraph.nodes) == 0:
-            tk.messagebox.showerror("Error", "No system to solve")
-            return
-        conn_comp = self.cgraph.pre_solve()
-        if conn_comp != 1:
-            tk.messagebox.showerror("Error", "Too many connected components in graph")
-            return
-        if len(self.cgraph.graph_conn_mat) == 1:
-            tk.messagebox.showerror("Error", "Isolated node in the graph (short-circuit)")
-            return
-        self.frameAttr.grid_forget()
-        self.frameSolve.grid(row=0, column=1, pady=1)
-        self.frameSolve.update_framesolve()
-
     def save(self):
-        file = open("save.pkl", "wb")
-        pickle.dump(self.cgraph, file)
+        data = {}
+        data["nodes"] = []
+        data["elements"] = []
+        for node in self.cgraph.nodes:
+            data["nodes"].append(node.to_dict())
+        for el in self.cgraph.elems:
+            data["elements"].append(el.to_dict(self.cgraph.nodes))
+        savetojson(data)
 
     def load(self):
-        file = open("save.pkl", "rb")
+        data = loadfromjson()
+        if data == None:
+            return
         for el in self.cgraph.elems:
             for id in el.ids:
                 self.canvas.delete(id)
-        self.cgraph = pickle.load(file)
+        self.cgraph = CircuitGraph()
+        nodes_coords = data["nodes"]
+        for el_dict in data["elements"]:
+            nodesid = el_dict["nodes"]
+            node1 = Node(*nodes_coords[nodesid[0]])
+            node2 = Node(*nodes_coords[nodesid[1]])
+
+            class_name = el_dict["type"]
+            constructor = globals()[class_name]
+            el = constructor(node1, node2, el_dict["value"], el_dict["active"])
+            el.set_name(el_dict["name"])
+
+            self.cgraph.add_elem(el)
+            self.cgraph.add_elem_nodes(el)
+
         for el in self.cgraph.elems:
             el.ids = []
             el.draw(self)

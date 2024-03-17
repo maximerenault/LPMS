@@ -3,12 +3,12 @@ from elements.capacitor import Capacitor
 from elements.ground import Ground
 from elements.inductor import Inductor
 from elements.psource import PSource
+from elements.qsource import QSource
 from elements.resistor import Resistor
 from solvers.graphedge import GraphEdge
 from solvers.graphnode import GraphNode
-import tkinter as tk
-from tkinter import ttk
 import matplotlib.pyplot as plt
+import utils.calculator as calc
 import copy
 
 
@@ -26,7 +26,7 @@ class CircuitSolver:
         self.solution = None
         # Backwards Differentiation Formula
         self.time_integrations = ["BDF", "BDF2"]
-        self.time_integration = None
+        self.time_integration = self.time_integrations[0]
         self.update_source_dict = {}
         self.update_M0_dict = {}
         self.update_M1_dict = {}
@@ -53,12 +53,12 @@ class CircuitSolver:
             try:
                 names.append(self.listened[i])
             except:
-                names.append("P"+str(i))
+                names.append("P" + str(i))
         for i in range(self.nbQ):
             try:
-                names.append(self.listened[self.nbP+i])
+                names.append(self.listened[self.nbP + i])
             except:
-                names.append("Q"+str(self.nbP+i))
+                names.append("Q" + str(self.nbP + i))
         np.savetxt(
             fname,
             self.solution,
@@ -147,8 +147,7 @@ class CircuitSolver:
         M0 = self.M0
         line = 0
         idQ = nbP
-        for i in range(len(paths)):
-            path = paths[i]
+        for i, path in enumerate(paths):
             startend = startends[i]
             idP0 = startend[0]
             for edge in path:
@@ -171,6 +170,12 @@ class CircuitSolver:
                 elif type(edge.elem) == Ground or type(edge.elem) == PSource:
                     idP1 = edge.start
                     M0[line, idP1] = 1
+                elif type(edge.elem) == QSource:
+                    if idP0 == edge.start:
+                        M0[line, idQ] = -1
+                    else:
+                        M0[line, idQ] = 1
+                    idP1 = edge.start
                 idP0 = idP1
                 line += 1
             idQ += 1
@@ -196,11 +201,10 @@ class CircuitSolver:
         """
         update_source_dict = {}
         line = 0
-        for i in range(len(paths)):
-            path = paths[i]
+        for i, path in enumerate(paths):
             for edge in path:
-                if type(edge.elem) == PSource:
-                    update_source_dict[line] = edge.elem.get_source()
+                if type(edge.elem) == PSource or type(edge.elem) == QSource:
+                    update_source_dict[line], _ = calc.calculate(edge.elem.get_value())
                 line += 1
         return update_source_dict
 
@@ -271,8 +275,7 @@ class CircuitSolver:
         remove them and update edges accordingly
         """
         rem = []
-        for i in range(len(nodes)):
-            node = nodes[i]
+        for i, node in enumerate(nodes):
             if node.type == "Source":
                 rem.append(i)
         rem.reverse()

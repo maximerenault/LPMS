@@ -3,9 +3,8 @@ from elements.wire import Wire
 
 
 class Resistor(Wire):
-    def __init__(self, node1, node2, R) -> None:
-        super().__init__(node1, node2)
-        self.R = R
+    def __init__(self, node1, node2, R, active=False) -> None:
+        super().__init__(node1, node2, R, active)
         self.widths = [1, 2]
 
     def draw(self, drbd):
@@ -44,12 +43,6 @@ class Resistor(Wire):
         p2 = mid + w / 2 * vec - h / 2 * vor
         p3 = mid - w / 2 * vec - h / 2 * vor
         return np.concatenate((p0, p1, p2, p3))
-
-    def set_value(self, R):
-        self.R = R
-
-    def get_value(self):
-        return self.R
 
     def __str__(self):
         return "R" + str(self.ids[0])

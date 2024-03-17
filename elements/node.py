@@ -22,3 +22,6 @@ class Node:
 
     def __repr__(self):
         return str(self)
+
+    def to_dict(self):
+        return [float(self.x), float(self.y)]

@@ -3,8 +3,8 @@ from elements.wire import Wire
 
 
 class Ground(Wire):
-    def __init__(self, node1, node2) -> None:
-        super().__init__(node1, node2)
+    def __init__(self, node1, node2, value: float | str | None = None, active: bool = False) -> None:
+        super().__init__(node1, node2, value, active)
         self.widths = [1, 1, 1, 1]
 
     def draw(self, drbd):
@@ -54,9 +54,22 @@ class Ground(Wire):
         if l == 0:
             self.nodes[1].setcoords(x0, y0)
         else:
-            x = x0 + round((x - x0) / l)*0.75
-            y = y0 + round((y - y0) / l)*0.75
+            x = x0 + round((x - x0) / l) * 0.75
+            y = y0 + round((y - y0) / l) * 0.75
             self.nodes[1].setcoords(x, y)
+
+    def drawname(self, drbd):
+        x0, y0, x1, y1 = drbd.coord2pix(self.getcoords())
+        x = (x0 + 2 * x1) // 3
+        y = (y0 + 2 * y1) // 3
+        self.nameid = drbd.canvas.create_text(x, y, text=self.name, tags="circuit")
+
+    def redrawname(self, drbd):
+        x0, y0, x1, y1 = drbd.coord2pix(self.getcoords())
+        x = (x0 + 2 * x1) // 3
+        y = (y0 + 2 * y1) // 3
+        drbd.canvas.coords(self.nameid, x, y)
+        drbd.canvas.itemconfig(self.nameid, text=self.name)
 
     def __str__(self):
         return "Gnd" + str(self.ids[0])

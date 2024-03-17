@@ -161,3 +161,6 @@ cython_debug/
 
 # Pickle saves
 *.pkl
+
+# Json saves
+*.json

@@ -1,5 +1,4 @@
 import math
-from pathlib import Path
 from elements.node import Node
 from elements.wire import Wire
 from elements.resistor import Resistor
@@ -7,11 +6,11 @@ from elements.inductor import Inductor
 from elements.capacitor import Capacitor
 from elements.ground import Ground
 from elements.psource import PSource
+from elements.qsource import QSource
 import numpy as np
 from scipy.sparse.csgraph import connected_components
 from scipy.sparse import csr_matrix
 from solvers.graphedge import GraphEdge
-
 from solvers.graphnode import GraphNode
 
 
@@ -34,7 +33,7 @@ class CircuitGraph:
         self.graph_edges = []
         self.graph_conn_mat = None
         self.graph_elids_mat = None
-        self.elem_num = {Wire: 1, Resistor: 2, Inductor: 3, Capacitor: 4, Ground: 5, PSource: 6}
+        self.elem_num = {Wire: 1, Resistor: 2, Inductor: 3, Capacitor: 4, Ground: 5, PSource: 6, QSource: 7}
 
     def add_elem(self, elem) -> None:
         self.elems.append(elem)
@@ -76,8 +75,7 @@ class CircuitGraph:
         l = len(self.nodes)
         self.connectivities = [0] * (l * (l - 1) // 2)
         elemids = [0] * (l * (l - 1) // 2)
-        for el_id in range(len(self.elems)):
-            elem = self.elems[el_id]
+        for el_id, elem in enumerate(self.elems):
             node1 = elem.nodes[0]
             node2 = elem.nodes[1]
             con1, _ = self.binary_search_node(0, len(self.nodes) - 1, node1)
@@ -331,7 +329,7 @@ class CircuitGraph:
                     self.graph_nodes[i].add_edge(edge)
                     self.graph_nodes[j].add_edge(edge)
         return
-    
+
     def graph_max_len_non_branching_paths(self) -> tuple[list, list]:
         """
         See max_len_non_branching_paths
@@ -340,8 +338,7 @@ class CircuitGraph:
         """
         Paths = []
         StartEnds = []
-        for i in range(len(self.graph_nodes)):
-            graphnode = self.graph_nodes[i]
+        for i, graphnode in enumerate(self.graph_nodes):
             if len(graphnode.edges) != 2:
                 for edge in graphnode.edges:
                     startend = []
