@@ -6,6 +6,8 @@ import tkinter as tk
 import networkx as nx
 import matplotlib
 from exceptions.solveframeexceptions import *
+from solvers.circuitgraph import CircuitGraph
+from solvers.circuitsolver import CircuitSolver
 from utils.strings import *
 
 matplotlib.use("TkAgg")
@@ -44,15 +46,15 @@ class FrameSolve(ttk.Frame):
             "labtimeint": {"text": "Integration scheme"},
         }
 
-        csolver = drbd.csolver
+        self.csolver = CircuitSolver()
 
         self.entry_options = {
-            "timestep": {"bindfunc": self.update_timestep, "insert": csolver.get_dt()},
-            "maxtime": {"bindfunc": self.update_maxtime, "insert": csolver.get_maxtime()},
+            "timestep": {"bindfunc": self.update_timestep, "insert": self.csolver.get_dt()},
+            "maxtime": {"bindfunc": self.update_maxtime, "insert": self.csolver.get_maxtime()},
         }
 
         self.cbbox_options = {
-            "time integration": {"values": drbd.csolver.time_integrations, "bindfunc": self.update_time_integration},
+            "time integration": {"values": self.csolver.time_integrations, "bindfunc": self.update_time_integration},
         }
 
         self.plot_options = {
@@ -79,7 +81,7 @@ class FrameSolve(ttk.Frame):
             return
         try:
             dt = float(dtstr)
-            self.drbd.csolver.set_dt(dt)
+            self.csolver.set_dt(dt)
         except:
             raise BadNumberError(dtstr)
 
@@ -93,7 +95,7 @@ class FrameSolve(ttk.Frame):
             return
         try:
             mt = float(mtstr)
-            self.drbd.csolver.set_maxtime(mt)
+            self.csolver.set_maxtime(mt)
         except:
             raise BadNumberError(mtstr)
 
@@ -101,26 +103,27 @@ class FrameSolve(ttk.Frame):
         """
         Update time integration scheme
         """
-        self.drbd.csolver.set_time_integration(event.widget.get())
+        self.csolver.set_time_integration(event.widget.get())
 
     def solve(self):
         # Pre-solving operations : removing wires, creating readable graph
-        if len(self.drbd.cgraph.nodes) == 0:
+        if len(self.drbd.cgeom.nodes) == 0:
             tk.messagebox.showerror("Error", "No system to solve")
             return
-        conn_comp = self.drbd.cgraph.pre_solve()
-        if conn_comp != 1:
-            tk.messagebox.showerror("Error", "Too many connected components in graph")
-            return
-        if len(self.drbd.cgraph.graph_conn_mat) == 1:
-            tk.messagebox.showerror("Error", "Isolated node in the graph (short-circuit)")
-            return
+        cgraph = CircuitGraph(self.drbd.cgeom.nodes, self.drbd.cgeom.elems)
+        # conn_comp = self.drbd.cgraph.pre_solve()
+        # if conn_comp != 1:
+        #     tk.messagebox.showerror("Error", "Too many connected components in graph")
+        #     return
+        # if len(self.drbd.cgraph.graph_conn_mat) == 1:
+        #     tk.messagebox.showerror("Error", "Isolated node in the graph (short-circuit)")
+        #     return
         
         # Solving operations
-        Paths, StartEnds = self.drbd.cgraph.graph_max_len_non_branching_paths()
+        Paths, StartEnds = cgraph.graph_max_len_non_branching_paths()
         nbQ = len(Paths)
-        nbP = len([n for n in self.drbd.cgraph.graph_nodes if n.type != "Source"])
-        cns = self.drbd.csolver.solve(nbP, nbQ, self.drbd.cgraph.graph_nodes, Paths, StartEnds)
+        nbP = len([n for n in cgraph.nodes if n.type != "Source"])
+        cns = self.csolver.solve(nbP, nbQ, cgraph.nodes, Paths, StartEnds)
         if cns == 1:
             tk.messagebox.showerror("Error", "The problem is under constrained, add a source")
             return

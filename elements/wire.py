@@ -7,6 +7,8 @@ class Wire:
         self.name = ""
         self.nameid = -1
         self.nodes = [node1, node2]
+        node1.add_elem(self)
+        node2.add_elem(self)
         self.bbox = -1
         self.ids = []
         self.widths = [1]
@@ -77,9 +79,18 @@ class Wire:
     def setend(self, x, y):
         self.nodes[1].setcoords(x, y)
 
+    def get_node_id(self, node):
+        if node == self.nodes[0]:
+            return 0
+        else:
+            return 1
+
+    def get_other_end(self, node):
+        return self.nodes[(self.get_node_id(node) + 1) % 2]
+
     def onElemClick(self, event, drbd):
         if drbd.drag_function == "Edit":
-            id, _ = drbd.cgraph.binary_search_elem(0, len(drbd.cgraph.elems), self)
+            id, _ = drbd.cgeom.binary_search_elem(0, len(drbd.cgeom.elems), self)
             if _:
                 drbd.frameAttr.change_elem(id)
             else:

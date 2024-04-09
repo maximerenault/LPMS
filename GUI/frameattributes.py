@@ -97,7 +97,7 @@ class FrameAttributes(ttk.Frame):
         if self.elem == -1:
             self.update_attributes()
             return
-        el = self.drbd.cgraph.elems[self.elem]
+        el = self.drbd.cgeom.elems[self.elem]
         el.name = stringvar.get()
         el.redrawname(self.drbd)
 
@@ -109,7 +109,7 @@ class FrameAttributes(ttk.Frame):
         if self.elem == -1:
             self.update_attributes()
             return
-        el = self.drbd.cgraph.elems[self.elem]
+        el = self.drbd.cgeom.elems[self.elem]
         coords = el.getcoords()
         newcoord = check_strint(stringvar.get())
         stringvar.set(newcoord)
@@ -145,7 +145,7 @@ class FrameAttributes(ttk.Frame):
         if self.elem == -1:
             self.update_attributes()
             return
-        el = self.drbd.cgraph.elems[self.elem]
+        el = self.drbd.cgeom.elems[self.elem]
         valstr = check_strfloat(stringvar.get())
         stringvar.set(valstr)
         if valstr == "" or valstr == "-":
@@ -165,7 +165,7 @@ class FrameAttributes(ttk.Frame):
         file_name = tk.filedialog.askopenfilename()
         if file_name:
             x, y = readvalues(file_name)
-            el = self.drbd.cgraph.elems[self.elem]
+            el = self.drbd.cgeom.elems[self.elem]
             el.set_source(x, y)
             self.update_attributes()
 
@@ -173,7 +173,7 @@ class FrameAttributes(ttk.Frame):
         """
         Update source-type element direction
         """
-        el = self.drbd.cgraph.elems[self.elem]
+        el = self.drbd.cgeom.elems[self.elem]
         coords = el.getcoords()
         dirx = event.widget.get()
         if dirx == "S":
@@ -233,7 +233,7 @@ class FrameAttributes(ttk.Frame):
             self.update_widget_list()
             return
 
-        el = self.drbd.cgraph.elems[self.elem]
+        el = self.drbd.cgeom.elems[self.elem]
         coords = el.getcoords()
 
         if isinstance(el, Resistor) or isinstance(el, Inductor) or isinstance(el, Capacitor):

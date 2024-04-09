@@ -1,17 +1,16 @@
-import json
-from GUI.gridzoom import GridZoom
-from GUI.frameattributes import FrameAttributes
-from GUI.framesolve import FrameSolve
-from elements.node import Node
-from elements.ground import Ground
-from elements.psource import PSource
-from elements.qsource import QSource
-from elements.wire import Wire
-from elements.resistor import Resistor
-from elements.capacitor import Capacitor
-from elements.inductor import Inductor
-from solvers.circuitgraph import CircuitGraph
-from solvers.circuitsolver import CircuitSolver
+from GUI.gridzoom           import GridZoom
+from GUI.frameattributes    import FrameAttributes
+from GUI.framesolve         import FrameSolve
+from elements.node          import Node
+from elements.ground        import Ground
+from elements.psource       import PSource
+from elements.qsource       import QSource
+from elements.wire          import Wire
+from elements.resistor      import Resistor
+from elements.capacitor     import Capacitor
+from elements.inductor      import Inductor
+from solvers.circuitgeom    import CircuitGeom
+from solvers.circuitsolver  import CircuitSolver
 from utils.geometry import *
 import tkinter as tk
 from tkinter import Frame, ttk
@@ -48,8 +47,7 @@ class DrawingBoard(GridZoom):
         self.prevdragx = 0
         self.prevdragy = 0
 
-        self.cgraph = CircuitGraph()
-        self.csolver = CircuitSolver()
+        self.cgeom = CircuitGeom()
 
         self.tabControl = ttk.Notebook(self.master)
 
@@ -60,19 +58,7 @@ class DrawingBoard(GridZoom):
 
         self.tabControl.add(self.frameAttr, text="Attributes")
         self.tabControl.add(self.frameSolve, text="Solver")
-        self.tabControl.grid(row=0, column=1, pady=1, sticky="nsew")
-
-        self.frameSolveSaveLoad = ttk.Frame(self.master)
-        self.frameSolveSaveLoad.grid(row=2, column=1, pady=1)
-        # self.presolvebutton = ttk.Button(self.frameSolveSaveLoad, command=self.presolve, text="Pre-Solve").pack(
-        #     side=tk.LEFT, padx=6, pady=3
-        # )
-        self.savebutton = ttk.Button(self.frameSolveSaveLoad, command=self.save, text="Save").pack(
-            side=tk.LEFT, padx=6, pady=3
-        )
-        self.loadbutton = ttk.Button(self.frameSolveSaveLoad, command=self.load, text="Load").pack(
-            side=tk.LEFT, padx=6, pady=3
-        )
+        self.tabControl.grid(row=0, column=1, rowspan=3, pady=1, sticky="nsew")
 
     def db_resize(self, event):
         """
@@ -125,9 +111,7 @@ class DrawingBoard(GridZoom):
 
             elem_init_pos(self, elem, eldir + 2)
             elem.draw(self)
-            node1.add_elem(elem)
-            node2.add_elem(elem)
-            self.cgraph.add_elem(elem)
+            self.cgeom.add_elem(elem)
 
     def db_move_to(self, event):
         """
@@ -145,10 +129,10 @@ class DrawingBoard(GridZoom):
             if self.prevdragx != x1 or self.prevdragy != y1:
                 self.prevdragx = x1
                 self.prevdragy = y1
-                elem = self.cgraph.elems[-1]
+                elem = self.cgeom.elems[-1]
                 x0, y0, _, _ = elem.getcoords()
                 elem.setend(x1, y1)
-                for el in self.cgraph.elems[:-1]:
+                for el in self.cgeom.elems[:-1]:
                     tempx, tempy = intersect(elem, el)
                     if distance(x0, y0, tempx, tempy) <= distance(x0, y0, x1, y1):
                         x1 = tempx
@@ -162,13 +146,13 @@ class DrawingBoard(GridZoom):
         Function for releasing left MB
         """
         if self.drag_function in self.drag_func_elems:
-            elem = self.cgraph.elems[-1]
+            elem = self.cgeom.elems[-1]
             coords = elem.getcoords()
             if coords[0] == coords[2] and coords[1] == coords[3]:
-                self.cgraph.del_elem(-1)
+                self.cgeom.del_elem(-1)
             else:
-                self.cgraph.add_elem_nodes(elem)
-                self.frameAttr.change_elem(len(self.cgraph.elems) - 1)
+                self.cgeom.add_elem_nodes(elem)
+                self.frameAttr.change_elem(len(self.cgeom.elems) - 1)
 
     def db_wheel(self, event):
         """
@@ -176,36 +160,37 @@ class DrawingBoard(GridZoom):
         mouse wheel
         """
         self.gridwheel(event)
-        for el in self.cgraph.elems:
+        for el in self.cgeom.elems:
             el.redraw(self)
 
     def dragchanger(self, event=None):
         self.drag_function = self.radiovalue.get()  # selected radio value
 
     def deleteElement(self, el_id):
-        el = self.cgraph.elems[el_id]
+        el = self.cgeom.elems[el_id]
         el.delete(self)
-        self.cgraph.del_elem(el_id)
+        self.cgeom.del_elem(el_id)
         del el
 
-    def save(self):
+    def save(self, filename=None):
         data = {}
         data["nodes"] = []
         data["elements"] = []
-        for node in self.cgraph.nodes:
+        for node in self.cgeom.nodes:
             data["nodes"].append(node.to_dict())
-        for el in self.cgraph.elems:
-            data["elements"].append(el.to_dict(self.cgraph.nodes))
-        savetojson(data)
+        for el in self.cgeom.elems:
+            data["elements"].append(el.to_dict(self.cgeom.nodes))
+        return savetojson(data, filename)
 
-    def load(self):
-        data = loadfromjson()
+    def load(self, filename=None):
+        data, filename = loadfromjson(filename)
         if data == None:
             return
-        for el in self.cgraph.elems:
+        for el in self.cgeom.elems:
             for id in el.ids:
                 self.canvas.delete(id)
-        self.cgraph = CircuitGraph()
+            self.canvas.delete(el.nameid)
+        self.cgeom = CircuitGeom()
         nodes_coords = data["nodes"]
         for el_dict in data["elements"]:
             nodesid = el_dict["nodes"]
@@ -217,9 +202,11 @@ class DrawingBoard(GridZoom):
             el = constructor(node1, node2, el_dict["value"], el_dict["active"])
             el.set_name(el_dict["name"])
 
-            self.cgraph.add_elem(el)
-            self.cgraph.add_elem_nodes(el)
+            self.cgeom.add_elem(el)
+            self.cgeom.add_elem_nodes(el)
 
-        for el in self.cgraph.elems:
+        for el in self.cgeom.elems:
             el.ids = []
             el.draw(self)
+
+        return filename

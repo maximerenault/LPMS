@@ -86,7 +86,7 @@ def start_from_elem(drbd, x0: float, y0: float):
     """
 
     eldir = 3  # Direction of the starting element, by default it points left (so we draw to the right)
-    for el in drbd.cgraph.elems[::-1]:
+    for el in drbd.cgeom.elems[::-1]:
         if point_on_elem(el, x0, y0):
             xs, ys, xe, ye = el.getcoords()
             if xs == xe:
@@ -134,7 +134,7 @@ def elem_init_pos(drbd, elem: Wire, startdir: int):
     while direction < 4:
         x1, y1 = directions[direction]
         elem.setend(x1, y1)
-        for el in drbd.cgraph.elems:
+        for el in drbd.cgeom.elems:
             tempx, tempy = intersect(elem, el)
             if distance(x0, y0, tempx, tempy) <= distance(x0, y0, x1, y1):
                 x1 = tempx
