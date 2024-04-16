@@ -111,13 +111,6 @@ class FrameSolve(ttk.Frame):
             tk.messagebox.showerror("Error", "No system to solve")
             return
         cgraph = CircuitGraph(self.drbd.cgeom.nodes, self.drbd.cgeom.elems)
-        # conn_comp = self.drbd.cgraph.pre_solve()
-        # if conn_comp != 1:
-        #     tk.messagebox.showerror("Error", "Too many connected components in graph")
-        #     return
-        # if len(self.drbd.cgraph.graph_conn_mat) == 1:
-        #     tk.messagebox.showerror("Error", "Isolated node in the graph (short-circuit)")
-        #     return
         
         # Solving operations
         Paths, StartEnds = cgraph.graph_max_len_non_branching_paths()

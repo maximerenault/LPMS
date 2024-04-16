@@ -19,8 +19,7 @@ class Inductor(Wire):
         self.ids.append(drbd.canvas.create_arc(x0, y0, x1, y1, width=2, tags="circuit", style=tk.ARC, extent=180, start=angle))
         self.ids.append(drbd.canvas.create_arc(x2, y2, x3, y3, width=2, tags="circuit", style=tk.ARC, extent=180, start=angle))
         self.ids.append(drbd.canvas.create_arc(x4, y4, x5, y5, width=2, tags="circuit", style=tk.ARC, extent=180, start=angle))
-        self.drawname(drbd)
-        self.drawbbox(drbd)
+        self.afterdraw(drbd)
 
     def redraw(self, drbd):
         x0, y0, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6, x7, y7 = drbd.coord2pix(self.get_ind_coords())
@@ -34,8 +33,7 @@ class Inductor(Wire):
         drbd.canvas.itemconfig(self.ids[3], start=angle)
         drbd.canvas.coords(self.ids[4], x4, y4, x5, y5)
         drbd.canvas.itemconfig(self.ids[4], start=angle)
-        self.redrawname(drbd)
-        self.redrawbbox(drbd)
+        self.afterredraw(drbd)
 
     def get_ind_coords(self):
         w = self.w

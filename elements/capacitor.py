@@ -23,8 +23,7 @@ class Capacitor(Wire):
         x00, y00, x10, y10 = drbd.coord2pix(self.getcoords())
         self.ids.append(drbd.canvas.create_line(x00, y00, x01, y01, tags="circuit"))
         self.ids.append(drbd.canvas.create_line(x10, y10, x11, y11, tags="circuit"))
-        self.drawname(drbd)
-        self.drawbbox(drbd)
+        self.afterdraw(drbd)
 
     def redraw(self, drbd):
         x0, y0, x1, y1, x2, y2, x3, y3 = self.get_cap_coords()
@@ -41,8 +40,7 @@ class Capacitor(Wire):
         drbd.canvas.coords(self.ids[2], x00, y00, x01, y01)
         drbd.canvas.coords(self.ids[3], x10, y10, x11, y11)
 
-        self.redrawname(drbd)
-        self.redrawbbox(drbd)
+        self.afterredraw(drbd)
 
     def get_cap_coords(self):
         w = self.w

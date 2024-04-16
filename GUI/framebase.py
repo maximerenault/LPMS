@@ -22,6 +22,8 @@ class FrameBase(ttk.Frame):
         button_options: dict = {},
         plot_options: dict = {},
         cbbox_options: dict = {},
+        checkbox_options: dict = {},
+        radio_options: dict = {},
     ):
         """From widget_list and the given options, creates all widgets following
         the shape of widget_list as follows :
@@ -52,12 +54,16 @@ class FrameBase(ttk.Frame):
         self.plots = {}
         self.buttons = {}
         self.cbbox = {}
+        self.checkbox = {}
+        self.radios = {}
 
         self.label_options = label_options
         self.entry_options = entry_options
         self.button_options = button_options
         self.plot_options = plot_options
         self.cbbox_options = cbbox_options
+        self.checkbox_options = checkbox_options
+        self.radio_options = radio_options
 
         self.place_widgets(self.widget_list)
         self.columnconfigure(0, weight=1)
@@ -79,6 +85,12 @@ class FrameBase(ttk.Frame):
         for bbox in self.cbbox.values():
             bbox.grid_forget()
             bbox.destroy()
+        for cbox in self.checkbox.values():
+            cbox.grid_forget()
+            cbox.destroy()
+        for radio in self.radios.values():
+            radio.grid_forget()
+            radio.destroy()
 
         # Clear dictionaries
         self.labels.clear()
@@ -86,6 +98,8 @@ class FrameBase(ttk.Frame):
         self.plots.clear()
         self.buttons.clear()
         self.cbbox.clear()
+        self.checkbox.clear()
+        self.radios.clear()
 
     def place_widgets(self, widget_list, row=0, col=0) -> int:
         colspan = self.colspan(widget_list)
@@ -114,7 +128,7 @@ class FrameBase(ttk.Frame):
             sv = tk.StringVar(value=entry_dict["insert"])
             sv.trace_add(
                 "write", lambda _a, _b, _c, sv=sv: entry_dict["bindfunc"](sv)
-            )  # sv=sv is very important to keep the reference
+            )  # sv=sv prevents garbage collection
             arg_entry = tk.Entry(self, width=10, textvariable=sv)
             arg_entry.grid(row=row, column=col, columnspan=colspan, sticky="nsew")
 
@@ -151,6 +165,33 @@ class FrameBase(ttk.Frame):
             arg_cbbox.bind("<<ComboboxSelected>>", cbbox_dict["bindfunc"])
 
             self.cbbox[widget] = arg_cbbox  # Store combobox in dictionary
+
+        elif widget in self.checkbox_options.keys():
+            # {"checkbox": {"text": str, "onoff": 0, "command": func}}
+            checkbox_dict = self.checkbox_options[widget]
+            var = tk.IntVar()
+            var.set(checkbox_dict["onoff"])
+            arg_checkbox = ttk.Checkbutton(
+                self, text=checkbox_dict["text"], variable=var, command=lambda var=var: checkbox_dict["command"]()
+            )  # var=var prevents garbage collection
+            arg_checkbox.grid(row=row, column=col, columnspan=colspan, sticky="nsew")
+
+            self.checkbox[widget] = arg_checkbox  # Store checkbox in dictionary
+
+        elif widget in self.radio_options.keys():
+            # {"radio": {"texts": [str], "values": [int], "command": func(var)}}
+            radio_dict = self.radio_options[widget]
+            arg_radio = ttk.Frame(self)
+            buttons = zip(radio_dict["texts"], radio_dict["values"])
+            var = tk.IntVar()
+            var.set(radio_dict["values"][0])  # Default Select
+            for tex, val in buttons:
+                radio = tk.Radiobutton(
+                    arg_radio, text=tex, variable=var, value=val, command=lambda var=var: radio_dict["command"](var)
+                ).pack(side=tk.LEFT)
+            arg_radio.grid(row=row, column=col, columnspan=colspan, sticky="nsew")
+
+            self.radios[widget] = arg_radio  # Store checkbox in dictionary
 
         return row + 1
 

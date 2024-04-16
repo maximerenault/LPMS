@@ -14,15 +14,13 @@ class PSource(Ground):
         xs, ys, xe, ye, x1, y1, x2, y2 = drbd.coord2pix(self.get_psource_coords())
         self.ids.append(drbd.canvas.create_line(xs, ys, xe, ye, width=self.widths[0], tags="circuit"))
         self.ids.append(drbd.canvas.create_oval(x1, y1, x2, y2, width=self.widths[1], tags="circuit"))
-        self.drawname(drbd)
-        self.drawbbox(drbd)
+        self.afterdraw(drbd)
 
     def redraw(self, drbd):
         xs, ys, xe, ye, x1, y1, x2, y2 = drbd.coord2pix(self.get_psource_coords())
         drbd.canvas.coords(self.ids[0], xs, ys, xe, ye)
         drbd.canvas.coords(self.ids[1], x1, y1, x2, y2)
-        self.redrawname(drbd)
-        self.redrawbbox(drbd)
+        self.afterredraw(drbd)
 
     def get_psource_coords(self):
         coords = self.getcoords()

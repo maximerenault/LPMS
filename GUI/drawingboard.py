@@ -10,7 +10,6 @@ from elements.resistor      import Resistor
 from elements.capacitor     import Capacitor
 from elements.inductor      import Inductor
 from solvers.circuitgeom    import CircuitGeom
-from solvers.circuitsolver  import CircuitSolver
 from utils.geometry import *
 import tkinter as tk
 from tkinter import Frame, ttk
@@ -201,6 +200,13 @@ class DrawingBoard(GridZoom):
             constructor = globals()[class_name]
             el = constructor(node1, node2, el_dict["value"], el_dict["active"])
             el.set_name(el_dict["name"])
+            try:
+                for i in range(2):
+                    if el_dict["pressure_listeners"][i]:
+                        el.toggle_listenP(i)
+                el.set_listenQ(int(el_dict["flow_listener"]))
+            except:
+                pass
 
             self.cgeom.add_elem(el)
             self.cgeom.add_elem_nodes(el)

@@ -13,8 +13,7 @@ class Ground(Wire):
         self.ids.append(drbd.canvas.create_line(x1, y1, x2, y2, tags="circuit"))
         self.ids.append(drbd.canvas.create_line(x3, y3, x4, y4, tags="circuit"))
         self.ids.append(drbd.canvas.create_line(x5, y5, x6, y6, tags="circuit"))
-        self.drawname(drbd)
-        self.drawbbox(drbd)
+        self.afterdraw(drbd)
 
     def redraw(self, drbd):
         xs, ys, xe, ye, x1, y1, x2, y2, x3, y3, x4, y4, x5, y5, x6, y6 = drbd.coord2pix(self.get_gnd_coords())
@@ -22,8 +21,7 @@ class Ground(Wire):
         drbd.canvas.coords(self.ids[1], x1, y1, x2, y2)
         drbd.canvas.coords(self.ids[2], x3, y3, x4, y4)
         drbd.canvas.coords(self.ids[3], x5, y5, x6, y6)
-        self.redrawname(drbd)
-        self.redrawbbox(drbd)
+        self.afterredraw(drbd)
 
     def get_gnd_coords(self):
         coords = self.getcoords()

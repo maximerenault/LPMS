@@ -3,7 +3,7 @@ from utils.io import readvalues
 import numpy as np
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from tkinter import StringVar, ttk
+from tkinter import ttk
 import tkinter as tk
 from elements.wire import Wire
 from elements.resistor import Resistor
@@ -32,9 +32,18 @@ class FrameAttributes(ttk.Frame):
 
         self.widget_lists = {
             "Clear": ["clear"],
-            "Wire": [[["labnam", "labsta", "labend"], ["name", [["startx", "endx"], ["starty", "endy"]]]], "delete"],
+            "Wire": [
+                [
+                    ["labnam", "labsta", "lablisten", "labend", "lablisten", "lablistenQ"],
+                    ["name", [["startx"], ["starty"]], "listenPstart", [["endx"], ["endy"]], "listenPend", "listenQ"],
+                ],
+                "delete",
+            ],
             "Dipole": [
-                [["labnam", "labsta", "labend", "labval"], ["name", [["startx", "endx"], ["starty", "endy"]], "value"]],
+                [
+                    ["labnam", "labsta", "lablisten", "labend", "lablisten", "labval", "lablistenQ"],
+                    ["name", [["startx"], ["starty"]], "listenPstart", [["endx"], ["endy"]], "listenPend", "value", "listenQ"]
+                ],
                 "delete",
             ],
             "Ground": [[["labnam", "labsta", "labdir"], ["name", [["startx"], ["starty"]], "direction"]], "delete"],
@@ -58,6 +67,8 @@ class FrameAttributes(ttk.Frame):
             "labnam": {"text": "Name"},
             "labval": {"text": "Value"},
             "labsta": {"text": "Start"},
+            "lablisten": {"text": "Listen"},
+            "lablistenQ": {"text": "Listen Q"},
             "labend": {"text": "End"},
             "labdir": {"text": "Direction"},
             "clear": {"text": "Attributes edition panel"},
@@ -81,6 +92,15 @@ class FrameAttributes(ttk.Frame):
         self.button_options = {
             "read": {"text": "Read file", "bindfunc": self.read_values},
             "delete": {"text": "Delete", "bindfunc": self.delete_elem},
+        }
+
+        self.checkbox_options = {
+            "listenPstart": {"text": "on/off", "onoff": 0, "command": lambda: self.change_listenP(0)},
+            "listenPend": {"text": "on/off", "onoff": 0, "command": lambda: self.change_listenP(1)},
+        }
+
+        self.radio_options = {
+            "listenQ": {"texts": ["off", "Q", "-Q"], "values": [0, 1, -1], "command": self.set_listenQ},
         }
 
         self.widget_frame = FrameBase(self, [])
@@ -186,10 +206,29 @@ class FrameAttributes(ttk.Frame):
             el.setend(coords[0] - 1, coords[1])
         el.redraw(self.drbd)
 
+    def change_listenP(self, pos):
+        """
+        Change pressure listening from True to False
+        and the other way around.
+        """
+        el = self.drbd.cgeom.elems[self.elem]
+        el.toggle_listenP(pos)
+        el.redraw(self.drbd)
+
+    def set_listenQ(self, var):
+        """
+        Set Q listening flag to 0 if off, 1 if same direction
+        as elem, -1 otherwise.
+        """
+        el = self.drbd.cgeom.elems[self.elem]
+        val = var.get()
+        el.set_listenQ(val)
+        el.redraw(self.drbd)
+
     def delete_elem(self):
         """
         Calls deleteElement from the
-        drawing board and resets attributes
+        drawing board and resets attributes.
         """
         if self.elem == -1:
             self.update_attributes()
@@ -219,6 +258,8 @@ class FrameAttributes(ttk.Frame):
             self.button_options,
             self.plot_options,
             self.cbbox_options,
+            self.checkbox_options,
+            self.radio_options,
         )
         self.widget_frame.grid(row=1, column=0, sticky="nsew")
         for i, row in enumerate(self.rowcol_weigths[key]["rows"]):
@@ -234,7 +275,6 @@ class FrameAttributes(ttk.Frame):
             return
 
         el = self.drbd.cgeom.elems[self.elem]
-        coords = el.getcoords()
 
         if isinstance(el, Resistor) or isinstance(el, Inductor) or isinstance(el, Capacitor):
             elemtype = "Dipole"
@@ -255,8 +295,11 @@ class FrameAttributes(ttk.Frame):
         self.entry_options["endx"]["insert"] = coords[2]
         self.entry_options["endy"]["insert"] = coords[3]
 
+        self.checkbox_options["listenPstart"]["onoff"] = int(el.get_listenP(0))
+        self.checkbox_options["listenPend"]["onoff"] = int(el.get_listenP(1))
+
         if el.active == True:
-            x = np.linspace(0,10,100)
+            x = np.linspace(0, 10, 100)
             y = calc.calculate(el.get_value())[0](x)
             self.plot_options["source"]["xy"] = (x, y)
 

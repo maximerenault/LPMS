@@ -1,8 +1,6 @@
 from elements.node import Node
 from elements.wire import Wire
 from elements.ground import Ground
-from scipy.sparse.csgraph import connected_components
-from scipy.sparse import csr_matrix
 from solvers.graphedge import GraphEdge
 from solvers.graphnode import GraphNode
 from bisect import bisect_left, bisect_right
@@ -13,6 +11,9 @@ class CircuitGraph:
         """
         A class that contains a directional graph representation of the circuit
         and allows for communication with the circuit solver.
+
+        This is not a "real" directional graph as we traverse its edges in any
+        direction, but they keep their direction to facilitate the next steps.
         """
         self.nodes, self.edges = self.convert_circuit_to_graph(cnodes, celems)
 
@@ -31,14 +32,18 @@ class CircuitGraph:
             idnode = len(nodes) - 1
 
             for cnode in subcnodes:
+                if cnode.listened :
+                    nodes[-1].listened = True
                 celem = cnode.elems[0]
                 if type(celem) == Wire:
                     # if we reach a wire, we collapse it
                     otherend = celem.get_other_end(cnode)
+                    if otherend.listened :
+                        nodes[-1].listened = True
                     idstart = bisect_left(cnodes, otherend)
                     idend = bisect_right(cnodes, otherend)
                     # we prevent going back through the same wire by removing the node
-                    # can't use list.remove because of the ordering of class Node
+                    # can't use list.remove because two nodes are equal if they have the same coords
                     for i in range(idstart, idend):
                         if cnodes[i].elems[0] == celem:
                             del cnodes[i]
@@ -111,7 +116,7 @@ class CircuitGraph:
                     StartEnds.append(startend)
         # Delete duplicates
         rem = []
-        for i in range(len(Paths) - 1):
+        for i in range(len(Paths)):
             path = Paths[i]
             path.reverse()
             if path in Paths[i + 1 :]:

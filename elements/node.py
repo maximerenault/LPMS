@@ -7,6 +7,8 @@ class Node:
         self.x = x
         self.y = y
         self.elems = []
+        self.id = -1
+        self.listened = False
 
     def getcoords(self):
         return np.array([self.x, self.y])
@@ -14,6 +16,31 @@ class Node:
     def setcoords(self, x, y):
         self.x = x
         self.y = y
+
+    def draw(self, drbd):
+        radius = 0.05
+        x0, y0 = self.x - radius, self.y + radius
+        x1, y1 = self.x + radius, self.y - radius
+        x0, y0, x1, y1 = drbd.coord2pix(np.array([x0, y0, x1, y1]))
+        if self.listened:
+            fill = "red"
+        else:
+            fill = ""
+        self.id = drbd.canvas.create_oval(x0, y0, x1, y1, fill=fill, outline="", tags="circuit")
+    
+    def redraw(self, drbd):
+        if self.listened:
+            drbd.canvas.itemconfig(self.id, fill="red")
+            radius = 0.05
+            x0, y0 = self.x - radius, self.y + radius
+            x1, y1 = self.x + radius, self.y - radius
+            x0, y0, x1, y1 = drbd.coord2pix(np.array([x0, y0, x1, y1]))
+            drbd.canvas.coords(self.id, x0, y0, x1, y1)
+        else:
+            drbd.canvas.itemconfig(self.id, fill="")
+
+    def toggle_listened(self):
+        self.listened = not self.listened
 
     def add_elem(self, elem):
         self.elems.append(elem)

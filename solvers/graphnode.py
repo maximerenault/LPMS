@@ -8,6 +8,7 @@ class GraphNode:
     def __init__(self, type: str = "Normal") -> None:
         self.edges = []
         self.type = type
+        self.listened = False
 
     def add_edge(self, edge: GraphEdge):
         self.edges.append(edge)

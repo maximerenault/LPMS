@@ -16,7 +16,22 @@ class CircuitGeom:
     def add_elem_nodes(self, elem:Wire) -> None:
         for i in range(len(elem.nodes)):
             self.nodes.append(elem.nodes[i])
-    
+
+    def del_elem(self, index:int) -> None:
+        """
+        Deletes the element at position [index].
+        Also deletes associated nodes.
+        """
+        elem = self.elems[index]
+        for i in range(len(elem.nodes)):
+            if elem.nodes[i] in self.nodes:
+                self.nodes.remove(elem.nodes[i])
+        self.elems.remove(elem)
+
+    ##
+    # DEPREC
+    ##
+
     def binary_search_node(self, low:int, high:int, node:Node) -> tuple[int, bool]:
         """
         Returns the index of the node for insertion,
@@ -73,14 +88,3 @@ class CircuitGeom:
             index = low
             exists = False
         return index, exists
-
-    def del_elem(self, index:int) -> None:
-        """
-        Deletes the element at position [index].
-        Also deletes associated nodes.
-        """
-        elem = self.elems[index]
-        for i in range(len(elem.nodes)):
-            if elem.nodes[i] in self.nodes:
-                self.nodes.remove(elem.nodes[i])
-        self.elems.remove(elem)

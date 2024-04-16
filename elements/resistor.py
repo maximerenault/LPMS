@@ -16,16 +16,14 @@ class Resistor(Wire):
                 x0, y0, x1, y1, x2, y2, x3, y3, fill="white", outline="black", width=2, tags="circuit"
             )
         )
-        self.drawname(drbd)
-        self.drawbbox(drbd)
+        self.afterdraw(drbd)
 
     def redraw(self, drbd):
         x0, y0, x1, y1 = drbd.coord2pix(self.getcoords())
         drbd.canvas.coords(self.ids[0], x0, y0, x1, y1)
         x0, y0, x1, y1, x2, y2, x3, y3 = drbd.coord2pix(self.get_rect_coords())
         drbd.canvas.coords(self.ids[1], x0, y0, x1, y1, x2, y2, x3, y3)
-        self.redrawname(drbd)
-        self.redrawbbox(drbd)
+        self.afterredraw(drbd)
 
     def get_rect_coords(self):
         w = 0.6

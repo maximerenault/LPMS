@@ -30,6 +30,7 @@ class CircuitSolver:
         self.update_source_dict = {}
         self.update_M0_dict = {}
         self.update_M1_dict = {}
+        self.signs = {}
         self.listened = {}
 
     def set_dt(self, dt: float) -> None:
@@ -104,6 +105,7 @@ class CircuitSolver:
         nodes, paths, startends = self.delete_node_sources(
             copy.deepcopy(nodes), copy.deepcopy(paths), copy.deepcopy(startends)
         )
+        self.set_listeners(nodes, paths, startends)
 
         time = 0.0
         step = 0
@@ -133,7 +135,17 @@ class CircuitSolver:
             self.solution[:, step + 1] = np.linalg.solve(self.LHS, self.RHS)
             step += 1
 
-        plt.plot(np.linspace(0, self.maxtime, nb_step + 1), self.solution.T)
+        for key in self.signs.keys():
+            self.solution[key] *= self.signs[key]
+
+        fig, axs = plt.subplots(2)
+        for key in self.listened.keys():
+            if key<nbP:
+                axs[0].plot(np.linspace(0, self.maxtime, nb_step + 1), self.solution[key], label=self.listened[key])
+            else:
+                axs[1].plot(np.linspace(0, self.maxtime, nb_step + 1), self.solution[key], label=self.listened[key])
+        axs[0].legend()
+        axs[1].legend()
         plt.show()
 
         return 0
@@ -156,17 +168,17 @@ class CircuitSolver:
                 else:
                     idP1 = edge.start
                 if type(edge.elem) == Resistor:
-                    M0[line, idP1] = 1
-                    M0[line, idP0] = -1
+                    M0[line, idP1] = -1
+                    M0[line, idP0] = 1
                     M0[line, idQ] = -edge.elem.get_value()
                 elif type(edge.elem) == Capacitor:
-                    M0[line, idP1] = 1
-                    M0[line, idP0] = -1
-                    M1[line, idQ] = -edge.elem.get_value()
-                elif type(edge.elem) == Inductor:
-                    M1[line, idP1] = edge.elem.get_value()
-                    M1[line, idP0] = -edge.elem.get_value()
+                    M1[line, idP1] = -edge.elem.get_value()
+                    M1[line, idP0] = edge.elem.get_value()
                     M0[line, idQ] = -1
+                elif type(edge.elem) == Inductor:
+                    M0[line, idP1] = -1
+                    M0[line, idP0] = 1
+                    M1[line, idQ] = -edge.elem.get_value()
                 elif type(edge.elem) == Ground or type(edge.elem) == PSource:
                     idP1 = edge.start
                     M0[line, idP1] = 1
@@ -194,6 +206,14 @@ class CircuitSolver:
                     idQ += 1
                 line += 1
         return
+    
+    def update_M0M1(self, time) -> None:
+        """
+        Update M0 and M1 according to the live elements
+        in update_M0_dict and update_M1_dict
+        """
+        for line in self.update_M0_dict.keys():
+            self.Source[line] = self.update_M0_dict[line](time)
 
     def build_source(self, paths) -> dict:
         """
@@ -301,3 +321,28 @@ class CircuitSolver:
                 if startend[1] > i:
                     startend[1] -= 1
         return nodes, paths, startends
+
+    def set_listeners(self, nodes, paths, startends) -> None:
+        c = 0
+        for i, node in enumerate(nodes):
+            if node.listened:
+                self.listened[i] = "P"+str(c)
+                c+=1
+        c = 0
+        for i, path in enumerate(paths):
+            startend = startends[i]
+            idP0 = startend[0]
+            for edge in path:
+                if idP0 == edge.start:
+                    idP1 = edge.end
+                    sign = 1
+                else:
+                    idP1 = edge.start
+                    sign = -1
+                if isinstance(edge.elem, Ground):
+                    idP1 = edge.start
+                if edge.elem.listened != 0:
+                    self.signs[len(nodes)+i] = sign * edge.elem.listened
+                    self.listened[len(nodes)+i] = "Q"+str(c)
+                    c+=1
+                idP0 = idP1
