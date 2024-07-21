@@ -8,7 +8,9 @@ class Node:
         self.y = y
         self.elems = []
         self.id = -1
+        self.radius = 0.05
         self.listened = False
+        self.listener_name = ""
 
     def getcoords(self):
         return np.array([self.x, self.y])
@@ -18,7 +20,7 @@ class Node:
         self.y = y
 
     def draw(self, drbd):
-        radius = 0.05
+        radius = self.radius
         x0, y0 = self.x - radius, self.y + radius
         x1, y1 = self.x + radius, self.y - radius
         x0, y0, x1, y1 = drbd.coord2pix(np.array([x0, y0, x1, y1]))
@@ -31,7 +33,7 @@ class Node:
     def redraw(self, drbd):
         if self.listened:
             drbd.canvas.itemconfig(self.id, fill="red")
-            radius = 0.05
+            radius = self.radius
             x0, y0 = self.x - radius, self.y + radius
             x1, y1 = self.x + radius, self.y - radius
             x0, y0, x1, y1 = drbd.coord2pix(np.array([x0, y0, x1, y1]))
@@ -39,8 +41,8 @@ class Node:
         else:
             drbd.canvas.itemconfig(self.id, fill="")
 
-    def toggle_listened(self):
-        self.listened = not self.listened
+    def set_listened(self, val):
+        self.listened = bool(val)
 
     def add_elem(self, elem):
         self.elems.append(elem)

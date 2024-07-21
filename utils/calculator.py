@@ -21,29 +21,42 @@ Variable = "t" | ... ;
 
 import numpy as np
 import operator as op
-from exceptions.calculatorexceptions import *
+from exceptions.calculatorexceptions import (
+    UnexpectedCharacterError,
+    BadNumberError,
+    BadFunctionError,
+    WrongArgsLenError,
+    UnexpectedEndError,
+)
 
-# A few utility functions
+# Constants for operator precedence
+PREC_EXPONENTIATION = 1
+PREC_MULT_DIV_MOD = 2
+PREC_ADD_SUB = 3
+PREC_RELATIONAL = 4
+PREC_EQUALITY = 5
+PREC_LOGICAL_AND = 6
+PREC_LOGICAL_XOR = 7
+PREC_LOGICAL_OR = 8
 
 
+# Utility functions
 def evaluate(items):
-    """
-    Evaluate a list of float returning functions separated by operators
+    """Evaluate a list of float-returning functions separated by operators
     (at the same level of precedence). Returns the result.
 
     >>> evaluate([lambda *args: 3, '*', lambda *args: 4, '/', lambda *args: 2])
     6
     """
 
-    assert items # Cannot evaluate empty list
-    assert len(items) % 2 == 1 # List must be of odd length
-
-    assoc = "left_to_right" # Useful if one day we add right_to_left associativity
+    assert items, "Cannot evaluate empty list"
+    assert len(items) % 2 == 1, "List must be of odd length"
+    assoc = "left_to_right"  # Useful if one day we add right_to_left associativity
 
     if assoc == "right_to_left":
         while len(items) > 1:
             items[-3:] = [_evaluate_binary(*items[-3:])]
-    
+
     if assoc == "left_to_right":
         while len(items) > 1:
             items[:3] = [_evaluate_binary(*items[:3])]
@@ -52,16 +65,13 @@ def evaluate(items):
 
 
 def _evaluate_binary(lhs, op, rhs):
-    """
-    Evalutates a single binary operation op where lhs and rhs are functions
-    returning floats or float arrays.
-    """
+    """Evaluates a single binary operation op where lhs and rhs are functions
+    returning floats or float arrays."""
     return lambda *args: flatten(operators)[op](lhs(*args), rhs(*args))
 
 
 def flatten(iterable):
-    """
-    Flattens a nested iterable by one nesting layer.
+    """Flattens a nested iterable by one nesting layer.
 
     >>> flatten([[1,2], [3]])
     [1, 2, 3]
@@ -69,18 +79,17 @@ def flatten(iterable):
     >>> flatten({1: {"a": "aa", "b": "bb"}, 2: {"c": "cc"}})
     {'a': 'aa', 'b': 'bb', 'c': 'cc'}
     """
-    if type(iterable) == dict:
+    if isinstance(iterable, dict):
         newdict = {}
         for x in iterable.values():
-            newdict = newdict | x
+            newdict.update(x)
         return newdict
     return [x for l in iterable for x in l]
 
 
-def get_char(list_str, id):
-    """
-    Returns a list of characters of index id from strings
-    listed in liststr. If the string is too short,
+def get_char(list_str, idx):
+    """Returns a list of characters of index idx from strings
+    listed in list_str. If the string is too short,
     returns an empty string.
 
     >>> get_char(["abc", "d", "ef"], 1)
@@ -93,18 +102,11 @@ def get_char(list_str, id):
     Returns:
         list(str): list of characters at index id
     """
-    list_ret = []
-    for string in list_str:
-        try:
-            list_ret += string[id]
-        except IndexError:
-            list_ret += ""
-    return list_ret
+    return [string[idx] if idx < len(string) else "" for string in list_str]
 
 
 def is_char_inorder(list_str):
-    """
-    Generator for checking non number tokens. It asks for the character
+    """Generator for checking non-number tokens. It asks for the character
     to check, then takes all the tokens starting with this character
     and yields True if such tokens exist, False otherwise. It repeats
     until no more tokens can be checked.
@@ -127,11 +129,11 @@ def is_char_inorder(list_str):
         bool: does the next character correspond to a token
     """
     my_tokens = list_str
-    for id in range(max([len(tok) for tok in my_tokens])):
-        list_char_id = get_char(my_tokens, id)
+    for idx in range(max(len(tok) for tok in my_tokens)):
+        list_char_idx = get_char(my_tokens, idx)
         c = yield
-        my_tokens = [my_tokens[i] for i, x in enumerate(list_char_id) if x == c]
-        yield my_tokens != []
+        my_tokens = [my_tokens[i] for i, x in enumerate(list_char_idx) if x == c]
+        yield bool(my_tokens)
 
 
 """
@@ -163,34 +165,25 @@ functions = {
 
 # These take two values and are disposed between them : expr op expr
 operators = {
-    1: {"**": op.pow},
-    2: {"*": op.mul, "/": op.truediv, "%": op.mod},
-    3: {"+": op.add, "-": op.sub},
-    4: {
-        "<": op.lt,
-        "<=": op.le,
-        ">": op.gt,
-        ">=": op.ge,
-    },
-    5: {"==": op.eq, "!=": op.ne},
-    6: {"&": op.and_},
-    7: {"^": op.xor},
-    8: {"|": op.or_},
+    PREC_EXPONENTIATION: {"**": op.pow},
+    PREC_MULT_DIV_MOD: {"*": op.mul, "/": op.truediv, "%": op.mod},
+    PREC_ADD_SUB: {"+": op.add, "-": op.sub},
+    PREC_RELATIONAL: {"<": op.lt, "<=": op.le, ">": op.gt, ">=": op.ge},
+    PREC_EQUALITY: {"==": op.eq, "!=": op.ne},
+    PREC_LOGICAL_AND: {"&": op.and_},
+    PREC_LOGICAL_XOR: {"^": op.xor},
+    PREC_LOGICAL_OR: {"|": op.or_},
 }
 
-# Constants
 constants = {"e": np.e, "pi": np.pi}
-
-# Variables
 variables = ["t"]
-
 all_tokens = list(functions) + list(flatten(operators)) + list(constants) + variables
-all_chars = "".join(all_tokens) + "0123456789.e-+()"  # Add characters specific to numbers
+all_chars = "".join(all_tokens) + "0123456789.e-+()"
 
 
+# Classes
 class PeekableIterator:
-    """
-    An iterator that supports 1-lookahead (peek).
+    """An iterator that supports 1-lookahead (peek).
     >>> i = PeekableIterator([1, 2, 3])
     >>> i.peek()
     1
@@ -206,32 +199,20 @@ class PeekableIterator:
 
     def __init__(self, iterable):
         self._iterator = iter(iterable)
-        self._next_item = next(self._iterator)
-        self._done = False
+        self._next_item = next(self._iterator, None)
+        self._done = self._next_item is None
 
     def peek(self):
-        """
-        Return the next item that will be returned by the iterator without
-        advancing the iterator. Raises StopIteration if the iterator is done.
-        """
         if self._done:
             raise StopIteration
-
         return self._next_item
 
     def __next__(self):
-        """
-        Return next item and update the peekable.
-        Raises StopIteration if the iterator is done.
-        """
         if self._done:
             raise StopIteration
-
         next_item = self._next_item
-        try:
-            self._next_item = next(self._iterator)
-        except StopIteration:
-            self._done = True
+        self._next_item = next(self._iterator, None)
+        self._done = self._next_item is None
         return next_item
 
     def __iter__(self):
@@ -267,28 +248,23 @@ class Scanner(BaseParser):
     def scan(self):
         """Yields all tokens in the input."""
         while not self._items._done:
-            # Ignore any whitespace that may be next
             self._consume_whitespace()
             self._check_supported()
-
             yield from self._take(lambda c: c in "()")
             yield from self._take_number()
             yield from self._take_function_operator_variable()
 
     def _consume_whitespace(self):
-        """_take()s whitespace characters, but does not yield them."""
-        # Note we need the list here to force evaluation of the generator
-        list(self._take(lambda char: char.isspace()))
+        list(self._take(str.isspace))
 
     def _check_supported(self):
         """Checks if next char is supported. Avoids infinite loops."""
         c = self._items.peek()
-        if not c in all_chars:
+        if c not in all_chars:
             raise UnexpectedCharacterError(c)
 
     def _take_number(self):
-        """
-        Yields a single number if there is one next in the input.
+        """Yields a single number if there is one next in the input.
         Supports decimal and scientific notation.
         """
         number = "".join(self._take(lambda c: c.isdigit() or c == "."))
@@ -334,7 +310,7 @@ class Parser(BaseParser):
         >>> Parser([1, '*', '(', 2, '+', 3, ')']).parse()
         5
         """
-        return self._parse_expression(max(list(operators))), self.vars
+        return self._parse_expression(max(operators.keys())), self.vars
 
     def _parse_expression(self, precedence):
         """Parse a Term and return the result of evaluating it.
@@ -342,16 +318,15 @@ class Parser(BaseParser):
         >>> Parser([3, '*', 2])._parse_expression(2)
         6
         """
-        if precedence == 1:
+        if precedence == PREC_EXPONENTIATION:
             parse = self._parse_factor
         else:
             parse = lambda: self._parse_expression(precedence - 1)
 
         # Parse the first (required) Factor
         factors = [parse()]
-
         # Parse any following ("op") Factor
-        ops = lambda t: t in operators[precedence].keys()
+        ops = lambda t: t in operators[precedence]
         factors += flatten((op, parse()) for op in self._take(ops))
 
         return evaluate(factors)
@@ -365,16 +340,12 @@ class Parser(BaseParser):
         >>> Parser(['(', 1, '+', 2, '*', 'abs', '(', '-', 3, ')', ')'])._parse_factor()
         7
         """
-
-        # This isn't really a for, we're just using it to handle the case
-        # where it doesn't find a number (gracefully skip). If it finds one,
-        # we return the number.
         for value in self._take(lambda t: isinstance(t, float)):
             return lambda *args: value
 
         for var in self._take(lambda t: t in variables):
             if var not in self.vars:
-                self.vars += var
+                self.vars.append(var)
 
             def lambd(*args):
                 if len(args) != len(self.vars):
@@ -384,35 +355,31 @@ class Parser(BaseParser):
             return lambd
 
         for sign in self._take(lambda t: t in "+-"):
-            if sign == "+":
-                return self._parse_factor()
-            if sign == "-":
-                value = self._parse_factor()
-                return lambda *args: -1 * value(*args)
+            value = self._parse_factor()
+            return lambda *args: (value(*args) if sign == "+" else -value(*args))
 
-        for cons in self._take(lambda t: t in constants.keys()):
+        for cons in self._take(lambda t: t in constants):
             value = constants[cons]
             return lambda *args: value
 
-        for func in self._take(lambda t: t in functions.keys()):
+        for func in self._take(lambda t: t in functions):
             self._expect("(")
-            value = self._parse_expression(max(list(operators)))
+            value = self._parse_expression(max(operators.keys()))
             self._expect(")")
             return lambda *args: functions[func](value(*args))
 
         for _ in self._take(lambda t: t == "("):
-            value = self._parse_expression(max(list(operators)))
+            value = self._parse_expression(max(operators.keys()))
             self._expect(")")
             return lambda *args: value(*args)
 
         # Parsing the number, function and subexpresion failed
-        raise self._unexpected("number", "(")
+        raise self._unexpected("number", "(", "function")
 
     def _expect(self, char):
         """Expect a certain character, or raise if it is not next."""
         for _ in self._take(lambda t: t == char):
             return
-
         raise self._unexpected(char)
 
     def _unexpected(self, *expected):
@@ -423,14 +390,19 @@ class Parser(BaseParser):
             return UnexpectedEndError(expected)
 
 
-def calculate(expression):
+def calculate(expression, return_vars=False):
     """Evaluates a mathematical expression and returns the result.
 
     >>> calculate('3 * (1 + 6 / 3)')
     9
     """
-    scan = Scanner(expression).scan()  # Iterator, once read it has to be rebuilt (no print)
-    return Parser(scan).parse()
+    scan = Scanner(expression).scan()
+    result, vars = Parser(scan).parse()
+
+    if return_vars:
+        return (result(), vars) if not vars else (result, vars)
+
+    return result() if not vars else result
 
 
 # my_constants = {"Emin": 0.1, "Emax": 2.0, "T1": 0.15, "T2": 0.3, "Tt": 0.7}

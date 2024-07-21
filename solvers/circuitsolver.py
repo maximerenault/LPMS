@@ -1,5 +1,7 @@
+from typing import Generator
 import numpy as np
 from elements.capacitor import Capacitor
+from elements.diode import Diode
 from elements.ground import Ground
 from elements.inductor import Inductor
 from elements.psource import PSource
@@ -30,6 +32,7 @@ class CircuitSolver:
         self.update_source_dict = {}
         self.update_M0_dict = {}
         self.update_M1_dict = {}
+        self.update_diode_dict = {}
         self.signs = {}
         self.listened = {}
 
@@ -105,7 +108,7 @@ class CircuitSolver:
         nodes, paths, startends = self.delete_node_sources(
             copy.deepcopy(nodes), copy.deepcopy(paths), copy.deepcopy(startends)
         )
-        self.set_listeners(nodes, paths, startends)
+        self.listened, self.signs = self.set_listeners(nodes, paths, startends)
 
         time = 0.0
         step = 0
@@ -117,9 +120,12 @@ class CircuitSolver:
         self.Source = np.zeros((nbP + nbQ), dtype=float)
         self.solution = np.zeros((nbP + nbQ, nb_step + 1))
 
-        self.build_M0M1(nbP, paths, startends)
+        self.update_diode_dict = self.build_M0M1(nbP, paths, startends)
         self.update_source_dict = self.build_source(paths)
         self.update_source(time)
+
+        if self.update_diode_dict != {}:
+            self.recompute_diodes(-1)
 
         # Initializing with steady-state solution
         try:
@@ -133,6 +139,14 @@ class CircuitSolver:
             self.update_source(time)
             self.build_RHS(step)
             self.solution[:, step + 1] = np.linalg.solve(self.LHS, self.RHS)
+            if self.update_diode(step):
+                self.build_LHS()
+                try:
+                    self.solution[:, step + 1] = np.linalg.solve(self.LHS, self.RHS)
+                except:
+                    self.recompute_diodes(step)
+                    self.build_LHS()
+                    self.solution[:, step + 1] = np.linalg.solve(self.LHS, self.RHS)
             step += 1
 
         for key in self.signs.keys():
@@ -140,7 +154,7 @@ class CircuitSolver:
 
         fig, axs = plt.subplots(2)
         for key in self.listened.keys():
-            if key<nbP:
+            if key < nbP:
                 axs[0].plot(np.linspace(0, self.maxtime, nb_step + 1), self.solution[key], label=self.listened[key])
             else:
                 axs[1].plot(np.linspace(0, self.maxtime, nb_step + 1), self.solution[key], label=self.listened[key])
@@ -153,10 +167,11 @@ class CircuitSolver:
     def build_M0M1(self, nbP, paths, startends) -> None:
         """
         Build matrices for zero and first order derivatives
-        of the unknown vector
+        of the unknown vector.
         """
         M1 = self.M1
         M0 = self.M0
+        update_diode_dict = {}
         line = 0
         idQ = nbP
         for i, path in enumerate(paths):
@@ -179,6 +194,13 @@ class CircuitSolver:
                     M0[line, idP1] = -1
                     M0[line, idP0] = 1
                     M1[line, idQ] = -edge.elem.get_value()
+                elif type(edge.elem) == Diode:
+                    M0[line, idP1] = -1
+                    M0[line, idP0] = 1
+                    if idP0 == edge.start:
+                        update_diode_dict[line] = [True, idP0, idP1, idQ, 1]  # True = Open, 1 -> Q
+                    else:
+                        update_diode_dict[line] = [True, idP0, idP1, idQ, -1]  # True = Open, -1 -> -Q
                 elif type(edge.elem) == Ground or type(edge.elem) == PSource:
                     idP1 = edge.start
                     M0[line, idP1] = 1
@@ -205,40 +227,118 @@ class CircuitSolver:
                         M0[line, idQ] = 1
                     idQ += 1
                 line += 1
-        return
-    
-    def update_M0M1(self, time) -> None:
+        return update_diode_dict
+
+    def update_M0M1(self, time: float) -> None:
         """
         Update M0 and M1 according to the live elements
-        in update_M0_dict and update_M1_dict
+        in update_M0_dict and update_M1_dict.
         """
         for line in self.update_M0_dict.keys():
             self.Source[line] = self.update_M0_dict[line](time)
 
+    def set_diode(self, line: int, diode_open: bool, resistor: bool = False) -> None:
+        """Sets the state of a diode to diode_open.
+
+        Args:
+            line (int): Line of matrix to which the diode is linked
+            diode_open (bool): State of the diode wanted
+        """
+        _, idP0, idP1, idQ, _ = self.update_diode_dict[line]
+        self.update_diode_dict[line][0] = diode_open
+        if resistor:
+            self.M0[line, idP1] = -1
+            self.M0[line, idP0] = 1
+            self.M0[line, idQ] = -0.1
+        elif diode_open:
+            self.M0[line, idP1] = 1
+            self.M0[line, idP0] = -1
+            self.M0[line, idQ] = 0
+        else:
+            self.M0[line, idP1] = 0
+            self.M0[line, idP0] = 0
+            self.M0[line, idQ] = 1
+
+    def update_diode(self, step: int) -> bool:
+        """Updates the state of a diode according to the flow passing trough
+        or the difference in potential between start and end.
+
+        Args:
+            step (int): step of the solution to check
+
+        Returns:
+            bool: Whether an update was made or not
+        """
+        recompute = False
+        for line in self.update_diode_dict.keys():
+            diode_open, idP0, idP1, idQ, signQ = self.update_diode_dict[line]
+            if diode_open:
+                if signQ * self.solution[idQ, step + 1] < 0:
+                    self.set_diode(line, diode_open=False)
+                    recompute = True
+            else:
+                if signQ * (self.solution[idP0, step + 1] - self.solution[idP1, step + 1]) > 0:
+                    self.set_diode(line, diode_open=True)
+                    recompute = True
+        return recompute
+
+    def try_diode_positions(self) -> Generator[None, None, None]:
+        """DEPRECATED.
+        Try diode positions in order following binary counting.
+
+        Yields:
+            Generator[None, None, None]: Nothing
+        """
+        lines = [line for line in self.update_diode_dict.keys()]
+        n = len(lines)
+
+        for b in range(1 << n):
+            # Change list of True/False "not intelligently"
+            s = bin(b)[2:].zfill(n)
+            diode_pos = map(lambda x: not bool(int(x)), list(s))
+            for line in lines:
+                diode_open = next(diode_pos)
+                self.set_diode(line, diode_open)
+            yield
+
+    def recompute_diodes(self, step: int) -> None:
+        """Replaces diodes with resistors and finds out the flow
+        direction to deduce the actual state of the diodes.
+
+        Args:
+            step (int): Step of the simulation
+        """
+        for line in self.update_diode_dict:
+            self.set_diode(line, False, True)
+        self.build_LHS()
+        self.build_RHS(step)
+        self.solution[:, step + 1] = np.linalg.solve(self.LHS, self.RHS)
+        self.update_diode(step)
+
     def build_source(self, paths) -> dict:
         """
-        Build live sources dict from list of paths
+        Build live sources dict from list of paths.
         """
         update_source_dict = {}
         line = 0
         for i, path in enumerate(paths):
             for edge in path:
                 if type(edge.elem) == PSource or type(edge.elem) == QSource:
-                    update_source_dict[line], _ = calc.calculate(edge.elem.get_value())
+                    update_source_dict[line] = calc.calculate(edge.elem.get_value())
                 line += 1
         return update_source_dict
 
     def update_source(self, time) -> None:
         """
         Update source vector according to the live sources
-        in update_source_dict
+        in update_source_dict.
         """
         for line in self.update_source_dict.keys():
             self.Source[line] = self.update_source_dict[line](time)
 
     def build_LHS(self) -> None:
         """
-        Build left hand side of the equation
+        Build left hand side of the equation.
         """
         self.LHS = np.zeros_like(self.M0)
         if self.time_integration == "BDF":
@@ -249,7 +349,7 @@ class CircuitSolver:
 
     def build_RHS(self, step: int) -> None:
         """
-        Build right hand side of the equation
+        Build right hand side of the equation.
         """
         self.RHS = np.zeros_like(self.Source)
         if self.time_integration == "BDF":
@@ -262,7 +362,7 @@ class CircuitSolver:
 
     def check_no_solution(self, nbP, nbQ, paths, startends) -> int:
         """
-        Check if the problem has a solution
+        Check if the problem has a solution.
         0 : OK
         1 : under constrained
         2 : over constrained
@@ -288,11 +388,11 @@ class CircuitSolver:
     def delete_node_sources(self, nodes, paths, startends) -> tuple[list, list, list]:
         """
         Method to remove annoying "Source" nodes that were
-        used previously to define correctly the graph
+        used previously to define correctly the graph.
 
         Since they are no use to build the system (as they provide the
         same pressure as the node on the other side of the edge) we
-        remove them and update edges accordingly
+        remove them and update edges accordingly.
         """
         rem = []
         for i, node in enumerate(nodes):
@@ -323,12 +423,11 @@ class CircuitSolver:
         return nodes, paths, startends
 
     def set_listeners(self, nodes, paths, startends) -> None:
-        c = 0
+        listened = {}
+        signs = {}
         for i, node in enumerate(nodes):
             if node.listened:
-                self.listened[i] = "P"+str(c)
-                c+=1
-        c = 0
+                listened[i] = node.listener_name
         for i, path in enumerate(paths):
             startend = startends[i]
             idP0 = startend[0]
@@ -342,7 +441,7 @@ class CircuitSolver:
                 if isinstance(edge.elem, Ground):
                     idP1 = edge.start
                 if edge.elem.listened != 0:
-                    self.signs[len(nodes)+i] = sign * edge.elem.listened
-                    self.listened[len(nodes)+i] = "Q"+str(c)
-                    c+=1
+                    signs[len(nodes) + i] = sign * edge.elem.listened
+                    listened[len(nodes) + i] = edge.elem.listener_name
                 idP0 = idP1
+        return listened, signs

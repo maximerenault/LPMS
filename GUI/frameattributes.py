@@ -11,6 +11,7 @@ from elements.capacitor import Capacitor
 from elements.inductor import Inductor
 from elements.ground import Ground
 from elements.psource import PSource
+from elements.diode import Diode
 from exceptions.attibutesexceptions import *
 from utils.strings import *
 import matplotlib
@@ -42,13 +43,21 @@ class FrameAttributes(ttk.Frame):
             "Dipole": [
                 [
                     ["labnam", "labsta", "lablisten", "labend", "lablisten", "labval", "lablistenQ"],
-                    ["name", [["startx"], ["starty"]], "listenPstart", [["endx"], ["endy"]], "listenPend", "value", "listenQ"]
+                    [
+                        "name",
+                        [["startx"], ["starty"]],
+                        "listenPstart",
+                        [["endx"], ["endy"]],
+                        "listenPend",
+                        "value",
+                        "listenQ",
+                    ],
                 ],
                 "delete",
             ],
             "Ground": [[["labnam", "labsta", "labdir"], ["name", [["startx"], ["starty"]], "direction"]], "delete"],
             "Source": [
-                [["labnam", "labsta", "labdir"], ["name", [["startx"], ["starty"]], "direction"]],
+                [["labnam", "labsta", "labdir", "labval"], ["name", [["startx"], ["starty"]], "direction", "value"]],
                 "source",
                 "read",
                 "delete",
@@ -95,12 +104,12 @@ class FrameAttributes(ttk.Frame):
         }
 
         self.checkbox_options = {
-            "listenPstart": {"text": "on/off", "onoff": 0, "command": lambda: self.change_listenP(0)},
-            "listenPend": {"text": "on/off", "onoff": 0, "command": lambda: self.change_listenP(1)},
+            "listenPstart": {"text": "on/off", "onoff": 0, "command": lambda var: self.set_listenP(0, var)},
+            "listenPend": {"text": "on/off", "onoff": 0, "command": lambda var: self.set_listenP(1, var)},
         }
 
         self.radio_options = {
-            "listenQ": {"texts": ["off", "Q", "-Q"], "values": [0, 1, -1], "command": self.set_listenQ},
+            "listenQ": {"texts": ["off", "Q", "-Q"], "values": [0, 1, -1], "value": 0, "command": self.set_listenQ},
         }
 
         self.widget_frame = FrameBase(self, [])
@@ -166,15 +175,16 @@ class FrameAttributes(ttk.Frame):
             self.update_attributes()
             return
         el = self.drbd.cgeom.elems[self.elem]
-        valstr = check_strfloat(stringvar.get())
-        stringvar.set(valstr)
-        if valstr == "" or valstr == "-":
-            return
-        try:
-            val = float(valstr)
-            el.set_value(val)
-        except:
-            raise BadNumberError(valstr)
+        el.set_value(stringvar.get())
+        # valstr = check_strfloat(stringvar.get())
+        # stringvar.set(valstr)
+        # if valstr == "" or valstr == "-":
+        #     return
+        # try:
+        #     val = float(valstr)
+        #     el.set_value(val)
+        # except:
+        #     raise BadNumberError(valstr)
 
     def read_values(self):
         """
@@ -206,13 +216,14 @@ class FrameAttributes(ttk.Frame):
             el.setend(coords[0] - 1, coords[1])
         el.redraw(self.drbd)
 
-    def change_listenP(self, pos):
+    def set_listenP(self, pos, var):
         """
         Change pressure listening from True to False
         and the other way around.
         """
         el = self.drbd.cgeom.elems[self.elem]
-        el.toggle_listenP(pos)
+        val = var.get()
+        el.set_listenP(pos, val, self.drbd)
         el.redraw(self.drbd)
 
     def set_listenQ(self, var):
@@ -222,7 +233,7 @@ class FrameAttributes(ttk.Frame):
         """
         el = self.drbd.cgeom.elems[self.elem]
         val = var.get()
-        el.set_listenQ(val)
+        el.set_listenQ(val, self.drbd)
         el.redraw(self.drbd)
 
     def delete_elem(self):
@@ -278,7 +289,7 @@ class FrameAttributes(ttk.Frame):
 
         if isinstance(el, Resistor) or isinstance(el, Inductor) or isinstance(el, Capacitor):
             elemtype = "Dipole"
-        elif type(el) == Wire:
+        elif type(el) == Wire or type(el) == Diode:
             elemtype = "Wire"  # Careful with inheritance and isinstance
         elif isinstance(el, PSource):
             elemtype = "Source"
@@ -297,10 +308,11 @@ class FrameAttributes(ttk.Frame):
 
         self.checkbox_options["listenPstart"]["onoff"] = int(el.get_listenP(0))
         self.checkbox_options["listenPend"]["onoff"] = int(el.get_listenP(1))
+        self.radio_options["listenQ"]["value"] = int(el.get_listenQ())
 
         if el.active == True:
             x = np.linspace(0, 10, 100)
-            y = calc.calculate(el.get_value())[0](x)
+            y = calc.calculate(el.get_value())(x)
             self.plot_options["source"]["xy"] = (x, y)
 
         self.update_widget_list(elemtype)

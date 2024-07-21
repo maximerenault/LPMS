@@ -28,9 +28,12 @@ class DrawingBoard(GridZoom):
         self.canvas.bind("<ButtonPress-1>", self.db_move_from)
         self.canvas.bind("<ButtonRelease-1>", self.db_release)
         self.canvas.bind("<B1-Motion>", self.db_move_to)
-        self.canvas.bind("<MouseWheel>", self.db_wheel)  # with Windows and MacOS, but not Linux
-        self.canvas.bind("<Button-5>", self.db_wheel)  # only with Linux, wheel scroll down
-        self.canvas.bind("<Button-4>", self.db_wheel)  # only with Linux, wheel scroll up
+        # with Windows and MacOS, but not Linux
+        self.canvas.bind("<MouseWheel>", self.db_wheel)
+        # only with Linux, wheel scroll down
+        self.canvas.bind("<Button-5>", self.db_wheel)
+        # only with Linux, wheel scroll up
+        self.canvas.bind("<Button-4>", self.db_wheel)
 
         self.frameChoices = ttk.Frame(self.master)
         self.frameChoices.grid(row=2, column=0, pady=1)
@@ -136,21 +139,11 @@ class DrawingBoard(GridZoom):
                 elem = self.cgeom.elems[-1]
                 x0, y0, _, _ = elem.getcoords()
                 elem.setend(x1, y1)
-
-                # Find the closest intersection
-                closest_x, closest_y = x1, y1
-                min_dist = float("inf")
-
                 for el in self.cgeom.elems[:-1]:
                     tempx, tempy = intersect(elem, el)
-                    dist = distance(x0, y0, tempx, tempy)
-                    if dist < min_dist:
-                        closest_x, closest_y = tempx, tempy
-                        min_dist = dist
-
-                if min_dist < distance(x0, y0, x1, y1):
-                    x1, y1 = closest_x, closest_y
-
+                    if distance(x0, y0, tempx, tempy) <= distance(x0, y0, x1, y1):
+                        x1 = tempx
+                        y1 = tempy
                 elem.setend(x1, y1)
                 elem.redraw(self)
                 self.show_frontground(event)
@@ -161,8 +154,8 @@ class DrawingBoard(GridZoom):
         """
         if self.drag_function in self.drag_func_elems:
             elem = self.cgeom.elems[-1]
-            x0, y0, x1, y1 = elem.getcoords()
-            if x0 == x1 and y0 == y1:
+            coords = elem.getcoords()
+            if coords[0] == coords[2] and coords[1] == coords[3]:
                 self.cgeom.del_elem(-1)
             else:
                 self.cgeom.add_elem_nodes(elem)
@@ -174,7 +167,8 @@ class DrawingBoard(GridZoom):
         mouse wheel
         """
         self.gridwheel(event)
-        self.redraw_elements()
+        for el in self.cgeom.elems:
+            el.redraw(self)
 
     def dragchanger(self, event=None):
         self.drag_function = self.radiovalue.get()  # selected radio value
@@ -197,49 +191,35 @@ class DrawingBoard(GridZoom):
 
     def load(self, filename=None):
         data, filename = loadfromjson(filename)
-        if data is None:
+        if data == None:
             return
-
-        self.clear_canvas()
-        self.load_nodes_elements(data["nodes"], data["elements"])
-        self.redraw_elements()
-
-        return filename
-
-    def clear_canvas(self):
         for el in self.cgeom.elems:
             for id in el.ids:
                 self.canvas.delete(id)
             self.canvas.delete(el.nameid)
-        self.cgeom.clear()
+        nodes_coords = data["nodes"]
+        for el_dict in data["elements"]:
+            nodesid = el_dict["nodes"]
+            node1 = Node(*nodes_coords[nodesid[0]])
+            node2 = Node(*nodes_coords[nodesid[1]])
 
-    def load_nodes_elements(self, nodes_data, elements_data):
-        for el_dict in elements_data:
-            id1, id2 = el_dict["nodes"]
-            node1 = Node(*nodes_data[id1])
-            node2 = Node(*nodes_data[id2])
-
-            constructor = globals().get(el_dict["type"], None)
-            if constructor is None:
-                print(f"Unknown element type: {el_dict['type']}")
-                continue
-
-            element = constructor(node1, node2, el_dict["value"], el_dict["active"])
-            element.set_name(el_dict["name"])
-            element.draw(self)
-
+            class_name = el_dict["type"]
+            constructor = globals()[class_name]
+            el = constructor(node1, node2, el_dict["value"], el_dict["active"])
+            el.set_name(el_dict["name"])
+            el.draw(self)
             for i in range(2):
-                element.set_listenP(i, el_dict["pressure_listeners"][i], self)
-                iid = self.frameListeners.get_node_iid(element.nodes[i].id)
+                el.set_listenP(i, el_dict["pressure_listeners"][i], self)
+                iid = self.frameListeners.get_node_iid(el.nodes[i].id)
                 self.frameListeners.edit_listener(iid, el_dict["pressure_listener_names"][i])
-
-            element.set_listenQ(int(el_dict["flow_listener"]), self)
-            iid = self.frameListeners.get_elem_iid(element.ids[0])
+            el.set_listenQ(int(el_dict["flow_listener"]), self)
+            iid = self.frameListeners.get_elem_iid(el.ids[0])
             self.frameListeners.edit_listener(iid, el_dict["flow_listener_name"])
 
-            self.cgeom.add_elem(element)
-            self.cgeom.add_elem_nodes(element)
+            self.cgeom.add_elem(el)
+            self.cgeom.add_elem_nodes(el)
 
-    def redraw_elements(self):
         for el in self.cgeom.elems:
             el.redraw(self)
+
+        return filename

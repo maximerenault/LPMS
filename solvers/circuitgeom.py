@@ -10,29 +10,34 @@ class CircuitGeom:
         self.elems = []
         self.nodes = []
 
-    def add_elem(self, elem:Wire) -> None:
+    def add_elem(self, elem: Wire) -> None:
         self.elems.append(elem)
 
-    def add_elem_nodes(self, elem:Wire) -> None:
-        for i in range(len(elem.nodes)):
-            self.nodes.append(elem.nodes[i])
+    def add_elem_nodes(self, elem: Wire) -> None:
+        for node in elem.nodes:
+            self.nodes.append(node)
 
-    def del_elem(self, index:int) -> None:
+    def del_elem(self, index: int) -> None:
         """
         Deletes the element at position [index].
         Also deletes associated nodes.
         """
-        elem = self.elems[index]
-        for i in range(len(elem.nodes)):
-            if elem.nodes[i] in self.nodes:
-                self.nodes.remove(elem.nodes[i])
-        self.elems.remove(elem)
+        del self.nodes[index * 2 + 1]
+        del self.nodes[index * 2]
+        del self.elems[index]
+
+    def clear(self) -> None:
+        """
+        Clears all elements and nodes from the circuit geometry.
+        """
+        self.elems.clear()
+        self.nodes.clear()
 
     ##
     # DEPREC
     ##
 
-    def binary_search_node(self, low:int, high:int, node:Node) -> tuple[int, bool]:
+    def binary_search_node(self, low: int, high: int, node: Node) -> tuple[int, bool]:
         """
         Returns the index of the node for insertion,
         or the index of the existing node if exists==True.
@@ -60,7 +65,7 @@ class CircuitGeom:
             exists = False
         return index, exists
 
-    def binary_search_elem(self, low:int, high:int, elem:Wire) -> tuple[int, bool]:
+    def binary_search_elem(self, low: int, high: int, elem: Wire) -> tuple[int, bool]:
         """
         Returns the index of the elem for insertion,
         or the index of the existing elem if exists==True.

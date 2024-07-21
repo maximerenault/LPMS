@@ -172,19 +172,19 @@ class FrameBase(ttk.Frame):
             var = tk.IntVar()
             var.set(checkbox_dict["onoff"])
             arg_checkbox = ttk.Checkbutton(
-                self, text=checkbox_dict["text"], variable=var, command=lambda var=var: checkbox_dict["command"]()
+                self, text=checkbox_dict["text"], variable=var, command=lambda var=var: checkbox_dict["command"](var)
             )  # var=var prevents garbage collection
             arg_checkbox.grid(row=row, column=col, columnspan=colspan, sticky="nsew")
 
             self.checkbox[widget] = arg_checkbox  # Store checkbox in dictionary
 
         elif widget in self.radio_options.keys():
-            # {"radio": {"texts": [str], "values": [int], "command": func(var)}}
+            # {"radio": {"texts": [str], "values": [int], "value": int, "command": func(var)}}
             radio_dict = self.radio_options[widget]
             arg_radio = ttk.Frame(self)
             buttons = zip(radio_dict["texts"], radio_dict["values"])
             var = tk.IntVar()
-            var.set(radio_dict["values"][0])  # Default Select
+            var.set(radio_dict["value"])  # Default Select
             for tex, val in buttons:
                 radio = tk.Radiobutton(
                     arg_radio, text=tex, variable=var, value=val, command=lambda var=var: radio_dict["command"](var)

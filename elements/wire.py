@@ -14,7 +14,9 @@ class Wire:
         self.ids = []
         self.widths = [1]
         self.listened = 0
+        self.listener_name = ""
         self.Qid = -1
+        self.Qsize = 1.0
 
         # Useful for elements with value
         self.active = active
@@ -24,6 +26,8 @@ class Wire:
         x0, y0, x1, y1, x2, y2, x3, y3 = drbd.coord2pix(self.get_bbox_coords())
         self.bbox = drbd.canvas.create_polygon(x0, y0, x1, y1, x2, y2, x3, y3, fill="", outline="", tags="circuit")
         drbd.canvas.tag_bind(self.bbox, "<ButtonPress-1>", lambda event, drbd=drbd: self.onElemClick(event, drbd))
+        drbd.canvas.tag_bind(self.bbox, "<ButtonRelease-1>", lambda event, drbd=drbd: self.onElemRelease(event, drbd))
+        drbd.canvas.tag_bind(self.bbox, "<B1-Motion>", lambda event, drbd=drbd: self.onElemMotion(event, drbd))
         drbd.canvas.tag_bind(self.bbox, "<Enter>", lambda event, drbd=drbd: self.onElemHoverI(event, drbd))
         drbd.canvas.tag_bind(self.bbox, "<Leave>", lambda event, drbd=drbd: self.onElemHoverO(event, drbd))
 
@@ -109,13 +113,13 @@ class Wire:
             return np.concatenate((coords, coords))
         sign = self.listened
         w = 0.85 * l
-        h = 0.2
+        h = 0.2 * self.Qsize
         vec = vec / l
         vor = np.array([-vec[1], vec[0]])
         mid = (coords[2:] + coords[:2]) / 2
-        p0 = mid + sign * (w / 2 - 0.1) * vec - h / 2 * vor
+        p0 = mid + sign * (w / 2 - 0.1 * self.Qsize) * vec - h / 2 * vor
         p1 = mid + sign * w / 2 * vec
-        p2 = mid + sign * (w / 2 - 0.1) * vec + h / 2 * vor
+        p2 = mid + sign * (w / 2 - 0.1 * self.Qsize) * vec + h / 2 * vor
         return np.concatenate((p0, p1, p2))
 
     def getcoords(self):
@@ -139,14 +143,23 @@ class Wire:
     def get_listenP(self, pos):
         return self.nodes[pos].listened
 
-    def toggle_listenP(self, pos):
-        self.nodes[pos].toggle_listened()
+    def set_listenP(self, pos, val, drbd):
+        self.nodes[pos].set_listened(val)
+        if val:
+            drbd.frameListeners.add_pressure_listener(self.nodes[pos])
+        else:
+            drbd.frameListeners.remove_pressure_listener(self.nodes[pos])
 
     def get_listenQ(self):
         return self.listened
 
-    def set_listenQ(self, val):
+    def set_listenQ(self, val, drbd):
+        oldval = self.listened
         self.listened = val
+        if oldval == 0 and val != 0:
+            drbd.frameListeners.add_flow_listener(self)
+        elif oldval != 0 and val == 0:
+            drbd.frameListeners.remove_flow_listener(self)
 
     def onElemClick(self, event, drbd):
         if drbd.drag_function == "Edit":
@@ -154,6 +167,20 @@ class Wire:
             if id == len(drbd.cgeom.elems):
                 print("Error: Could not find element")
             drbd.frameAttr.change_elem(id)
+            drbd.nomove = True
+            self.prevcoords = self.getcoords()
+            self.x0, self.y0 = drbd.pix2coord(event.x, event.y)
+
+    def onElemRelease(self, event, drbd):
+        if drbd.drag_function == "Edit":
+            drbd.nomove = False
+
+    def onElemMotion(self, event, drbd):
+        if drbd.drag_function == "Edit":
+            x1, y1 = drbd.pix2coord(event.x, event.y)
+            self.setstart(self.prevcoords[0] - round(self.x0 - x1), self.prevcoords[1] - round(self.y0 - y1))
+            self.setend(self.prevcoords[2] - round(self.x0 - x1), self.prevcoords[3] - round(self.y0 - y1))
+            self.redraw(drbd)
 
     def onElemHoverI(self, event, drbd):
         if drbd.drag_function == "Edit":
@@ -170,7 +197,7 @@ class Wire:
             drbd.canvas.delete(id)
         drbd.canvas.delete(self.bbox)
         drbd.canvas.delete(self.nameid)
-        drbd.canavs.delete(self.Qid)
+        drbd.canvas.delete(self.Qid)
 
     def __str__(self):
         return "W" + str(self.ids[0])
@@ -202,7 +229,9 @@ class Wire:
         my_dict["name"] = self.name
         my_dict["nodes"] = [nodes_list.index(self.nodes[0]), nodes_list.index(self.nodes[1])]
         my_dict["pressure_listeners"] = [self.get_listenP(0), self.get_listenP(1)]
+        my_dict["pressure_listener_names"] = [self.nodes[0].listener_name, self.nodes[1].listener_name]
         my_dict["flow_listener"] = self.get_listenQ()
+        my_dict["flow_listener_name"] = self.listener_name
         my_dict["active"] = self.active
         my_dict["value"] = self.get_value()
         return my_dict

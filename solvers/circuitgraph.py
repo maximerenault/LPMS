@@ -32,13 +32,14 @@ class CircuitGraph:
             idnode = len(nodes) - 1
 
             for cnode in subcnodes:
-                if cnode.listened :
+                if cnode.listened:
                     nodes[-1].listened = True
+                    nodes[-1].listener_name = cnode.listener_name
                 celem = cnode.elems[0]
                 if type(celem) == Wire:
                     # if we reach a wire, we collapse it
                     otherend = celem.get_other_end(cnode)
-                    if otherend.listened :
+                    if otherend.listened:
                         nodes[-1].listened = True
                     idstart = bisect_left(cnodes, otherend)
                     idend = bisect_right(cnodes, otherend)

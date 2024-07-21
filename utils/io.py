@@ -1,35 +1,69 @@
 import pandas as pd
 import json
-import tkinter as tk
+import numpy as np
+from tkinter import filedialog
+from typing import Optional, Tuple
 
 
-def readvalues(file_name: str) -> None:
+def readvalues(file_name: str) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Read values from a tab-separated CSV file and return time and value arrays.
+
+    Args:
+        file_name (str): The name of the CSV file.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray]: Arrays of time and values.
+    """
     df = pd.read_csv(file_name, sep="\t")
-    time = df.columns[0]
-    value = df.columns[1]
-    return df[time].to_numpy(dtype=float), df[value].to_numpy(dtype=float)
+    time_column = df.columns[0]
+    value_column = df.columns[1]
+    return df[time_column].to_numpy(dtype=float), df[value_column].to_numpy(dtype=float)
 
 
-def savetojson(data: dict, filename=None) -> str:
+def savetojson(data: dict, filename: Optional[str] = None) -> Optional[str]:
+    """
+    Save a dictionary to a JSON file.
+
+    Args:
+        data (dict): The data to save.
+        filename (Optional[str]): The name of the file. If None, a file dialog will open.
+
+    Returns:
+        Optional[str]: The name of the file where data was saved, or None if the operation was canceled.
+    """
     if filename is None:
-        outfile = tk.filedialog.asksaveasfile(
+        outfile = filedialog.asksaveasfile(
             initialfile="circuit.json", defaultextension=".json", filetypes=[("All Files", "*.*"), ("JSON", "*.json")]
         )
+        if outfile is None:
+            return None
     else:
         outfile = open(filename, "w")
-    if outfile is None:
-        return
+
     json_str = json.dumps(data, indent=4)
     outfile.write(json_str)
-    return outfile.name
+    outfile.close()
+    return outfile.name if filename is None else filename
 
 
-def loadfromjson(filename=None) -> tuple[dict, str]:
+def loadfromjson(filename: Optional[str] = None) -> Tuple[Optional[dict], Optional[str]]:
+    """
+    Load a dictionary from a JSON file.
+
+    Args:
+        filename (Optional[str]): The name of the file. If None, a file dialog will open.
+
+    Returns:
+        Tuple[Optional[dict], Optional[str]]: The loaded data and the filename, or (None, None) if the operation was canceled.
+    """
     if filename is None:
-        infile = tk.filedialog.askopenfile(filetypes=[("All Files", "*.*"), ("JSON", "*.json")])
+        infile = filedialog.askopenfile(filetypes=[("All Files", "*.*"), ("JSON", "*.json")])
+        if infile is None:
+            return None, None
     else:
         infile = open(filename, "r")
-    if infile is None:
-        return None, None
+
     data = json.load(infile)
-    return data, infile.name
+    infile.close()
+    return data, infile.name if filename is None else filename

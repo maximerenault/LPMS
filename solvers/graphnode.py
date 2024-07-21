@@ -9,6 +9,7 @@ class GraphNode:
         self.edges = []
         self.type = type
         self.listened = False
+        self.listener_name = ""
 
     def add_edge(self, edge: GraphEdge):
         self.edges.append(edge)

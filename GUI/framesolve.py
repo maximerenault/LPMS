@@ -118,10 +118,10 @@ class FrameSolve(ttk.Frame):
         nbP = len([n for n in cgraph.nodes if n.type != "Source"])
         cns = self.csolver.solve(nbP, nbQ, cgraph.nodes, Paths, StartEnds)
         if cns == 1:
-            tk.messagebox.showerror("Error", "The problem is under constrained, add a source")
+            tk.messagebox.showerror("Error", "The problem is under constrained.")
             return
         if cns == 2:
-            tk.messagebox.showerror("Error", "The problem is over constrained, remove a source")
+            tk.messagebox.showerror("Error", "The problem is over constrained.")
             return
         return
 
