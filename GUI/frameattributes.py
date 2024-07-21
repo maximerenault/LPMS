@@ -301,10 +301,10 @@ class FrameAttributes(ttk.Frame):
         coords = el.getcoords()
         self.entry_options["name"]["insert"] = el.name
         self.entry_options["value"]["insert"] = el.value
-        self.entry_options["startx"]["insert"] = coords[0]
-        self.entry_options["starty"]["insert"] = coords[1]
-        self.entry_options["endx"]["insert"] = coords[2]
-        self.entry_options["endy"]["insert"] = coords[3]
+        self.entry_options["startx"]["insert"] = int(coords[0])
+        self.entry_options["starty"]["insert"] = int(coords[1])
+        self.entry_options["endx"]["insert"] = int(coords[2])
+        self.entry_options["endy"]["insert"] = int(coords[3])
 
         self.checkbox_options["listenPstart"]["onoff"] = int(el.get_listenP(0))
         self.checkbox_options["listenPend"]["onoff"] = int(el.get_listenP(1))

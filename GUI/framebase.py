@@ -10,20 +10,20 @@ matplotlib.use("TkAgg")
 class FrameBase(ttk.Frame):
     """
     A base class for displaying numerous labels, entries,
-    buttons or plots.
+    buttons, or plots.
     """
 
     def __init__(
         self,
         master: ttk.Frame,
         widget_list: list,
-        label_options: dict = {},
-        entry_options: dict = {},
-        button_options: dict = {},
-        plot_options: dict = {},
-        cbbox_options: dict = {},
-        checkbox_options: dict = {},
-        radio_options: dict = {},
+        label_options: dict = None,
+        entry_options: dict = None,
+        button_options: dict = None,
+        plot_options: dict = None,
+        combobox_options: dict = None,
+        checkbox_options: dict = None,
+        radio_options: dict = None,
     ):
         """From widget_list and the given options, creates all widgets following
         the shape of widget_list as follows :
@@ -39,169 +39,163 @@ class FrameBase(ttk.Frame):
         Widgets are generated in the order given in widget list.
 
         Args:
-            master (ttk.Frame): Frame in wich this frame is embedded.
-            widget_list (list): List of widgets, see above for more details.
-            label_options (dict, optional): See init_widgets for more details. Defaults to {}.
-            entry_options (dict, optional): See init_widgets for more details. Defaults to {}.
-            button_options (dict, optional): See init_widgets for more details. Defaults to {}.
-            plot_options (dict, optional): See init_widgets for more details. Defaults to {}.
-            cbbox_options (dict, optional): See init_widgets for more details. Defaults to {}.
+            master (ttk.Frame): Frame in which this frame is embedded.
+            widget_list (list): List of widgets to be displayed.
+            label_options (dict, optional): Options for labels. Defaults to None.
+            entry_options (dict, optional): Options for entries. Defaults to None.
+            button_options (dict, optional): Options for buttons. Defaults to None.
+            plot_options (dict, optional): Options for plots. Defaults to None.
+            combobox_options (dict, optional): Options for comboboxes. Defaults to None.
+            checkbox_options (dict, optional): Options for checkboxes. Defaults to None.
+            radio_options (dict, optional): Options for radio buttons. Defaults to None.
         """
-        ttk.Frame.__init__(self, master)
+        super().__init__(master)
         self.widget_list = widget_list
         self.entries = {}
         self.labels = {}
         self.plots = {}
         self.buttons = {}
-        self.cbbox = {}
+        self.combobox = {}
         self.checkbox = {}
         self.radios = {}
 
-        self.label_options = label_options
-        self.entry_options = entry_options
-        self.button_options = button_options
-        self.plot_options = plot_options
-        self.cbbox_options = cbbox_options
-        self.checkbox_options = checkbox_options
-        self.radio_options = radio_options
+        self.label_options = label_options or {}
+        self.entry_options = entry_options or {}
+        self.button_options = button_options or {}
+        self.plot_options = plot_options or {}
+        self.combobox_options = combobox_options or {}
+        self.checkbox_options = checkbox_options or {}
+        self.radio_options = radio_options or {}
 
         self.place_widgets(self.widget_list)
         self.columnconfigure(0, weight=1)
 
     def delete_all(self):
-        # Destroy existing labels and entries
-        for label in self.labels.values():
-            label.grid_forget()
-            label.destroy()
-        for entry in self.entries.values():
-            entry.grid_forget()
-            entry.destroy()
-        for plot in self.plots.values():
-            plot.get_tk_widget().grid_forget()
-            plot.get_tk_widget().destroy()
-        for button in self.buttons.values():
-            button.grid_forget()
-            button.destroy()
-        for bbox in self.cbbox.values():
-            bbox.grid_forget()
-            bbox.destroy()
-        for cbox in self.checkbox.values():
-            cbox.grid_forget()
-            cbox.destroy()
-        for radio in self.radios.values():
-            radio.grid_forget()
-            radio.destroy()
-
-        # Clear dictionaries
-        self.labels.clear()
-        self.entries.clear()
-        self.plots.clear()
-        self.buttons.clear()
-        self.cbbox.clear()
-        self.checkbox.clear()
-        self.radios.clear()
+        """Deletes all widgets from the frame."""
+        for widget_dict in [
+            self.labels,
+            self.entries,
+            self.plots,
+            self.buttons,
+            self.combobox,
+            self.checkbox,
+            self.radios,
+        ]:
+            for widget in widget_dict.values():
+                widget.grid_forget()
+                widget.destroy()
+            widget_dict.clear()
 
     def place_widgets(self, widget_list, row=0, col=0) -> int:
+        """Places the widgets in the frame based on the widget_list layout."""
         colspan = self.colspan(widget_list)
         for widget in widget_list:
             row = self.place_widget(widget, row, col, colspan)
         return row
 
     def place_widget(self, widget, row, col, colspan) -> int:
+        """Places a single widget in the frame."""
         if isinstance(widget, list):
-            prevrow = row
-            for i, sublist in enumerate(widget):
-                row = max(row, self.place_widgets(sublist, prevrow, col + i))
-            return row
-
-        elif widget in self.label_options.keys():
-            # {"labelkey": {"text": "yourtexthere"}}
-            label_dict = self.label_options[widget]
-            arg_label = tk.Label(self, text=label_dict["text"])
-            arg_label.grid(row=row, column=col, columnspan=colspan, sticky="nsew")
-
-            self.labels[widget] = arg_label
-
-        elif widget in self.entry_options.keys():
-            # {"entrykey": {"binfunc": func, "insert": "text"}}
-            entry_dict = self.entry_options[widget]
-            sv = tk.StringVar(value=entry_dict["insert"])
-            sv.trace_add(
-                "write", lambda _a, _b, _c, sv=sv: entry_dict["bindfunc"](sv)
-            )  # sv=sv prevents garbage collection
-            arg_entry = tk.Entry(self, width=10, textvariable=sv)
-            arg_entry.grid(row=row, column=col, columnspan=colspan, sticky="nsew")
-
-            self.entries[widget] = arg_entry
-
-        elif widget in self.plot_options.keys():
-            # {"plotkey": {"dpi": 100, "xy": (x,y)}}
-            plot_dict = self.plot_options[widget]
-            font = {"family": "monospace", "size": 7}
-            matplotlib.rc("font", **font)
-            f = Figure(figsize=(2, 1.5), dpi=plot_dict["dpi"], tight_layout=True)
-            subplot = f.add_subplot(111)
-            subplot.plot(*plot_dict["xy"])
-            arg_canv = FigureCanvasTkAgg(f, self)
-            arg_canv.draw()
-            arg_canv.get_tk_widget().grid(row=row, column=col, columnspan=colspan, sticky="nsew")
-
-            self.plots[widget] = arg_canv
-
-        elif widget in self.button_options.keys():
-            # {"buttonkey": {"bindfunc": func, "text": "title"}}
-            button_dict = self.button_options[widget]
-            arg_button = ttk.Button(self, command=button_dict["bindfunc"], text=button_dict["text"])
-            arg_button.grid(row=row, column=col, columnspan=colspan, sticky="nsew")
-
-            self.buttons[widget] = arg_button
-
-        elif widget in self.cbbox_options.keys():
-            # {"cbboxkey": {"values": list(str), "bindfunc": func}}
-            cbbox_dict = self.cbbox_options[widget]
-            arg_cbbox = ttk.Combobox(self, values=cbbox_dict["values"], state="readonly")
-            arg_cbbox.grid(row=row, column=col, columnspan=colspan, sticky="nsew")
-            arg_cbbox.current(0)
-            arg_cbbox.bind("<<ComboboxSelected>>", cbbox_dict["bindfunc"])
-
-            self.cbbox[widget] = arg_cbbox  # Store combobox in dictionary
-
-        elif widget in self.checkbox_options.keys():
-            # {"checkbox": {"text": str, "onoff": 0, "command": func}}
-            checkbox_dict = self.checkbox_options[widget]
-            var = tk.IntVar()
-            var.set(checkbox_dict["onoff"])
-            arg_checkbox = ttk.Checkbutton(
-                self, text=checkbox_dict["text"], variable=var, command=lambda var=var: checkbox_dict["command"](var)
-            )  # var=var prevents garbage collection
-            arg_checkbox.grid(row=row, column=col, columnspan=colspan, sticky="nsew")
-
-            self.checkbox[widget] = arg_checkbox  # Store checkbox in dictionary
-
-        elif widget in self.radio_options.keys():
-            # {"radio": {"texts": [str], "values": [int], "value": int, "command": func(var)}}
-            radio_dict = self.radio_options[widget]
-            arg_radio = ttk.Frame(self)
-            buttons = zip(radio_dict["texts"], radio_dict["values"])
-            var = tk.IntVar()
-            var.set(radio_dict["value"])  # Default Select
-            for tex, val in buttons:
-                radio = tk.Radiobutton(
-                    arg_radio, text=tex, variable=var, value=val, command=lambda var=var: radio_dict["command"](var)
-                ).pack(side=tk.LEFT)
-            arg_radio.grid(row=row, column=col, columnspan=colspan, sticky="nsew")
-
-            self.radios[widget] = arg_radio  # Store checkbox in dictionary
-
+            return self.place_sub_widgets(widget, row, col)
+        widget_creation_map = {
+            "label": self.create_label,
+            "entry": self.create_entry,
+            "plot": self.create_plot,
+            "button": self.create_button,
+            "combobox": self.create_combobox,
+            "checkbox": self.create_checkbox,
+            "radio": self.create_radio,
+        }
+        for widget_type, creation_func in widget_creation_map.items():
+            options_dict = getattr(self, f"{widget_type}_options", {})
+            if widget in options_dict:
+                creation_func(widget, options_dict[widget], row, col, colspan)
+                break
         return row + 1
 
-    def colspan(self, widget_list):
-        span = 1
-        for widget in widget_list:
-            spanwidg = 0
-            if isinstance(widget, list):
-                for sublist in widget:
-                    assert isinstance(sublist, list), "Widget list should contain widgets or lists of lists of widgets"
-                    spanwidg += self.colspan(sublist)
-            span = max(span, spanwidg)
-        return span
+    def place_sub_widgets(self, sub_widgets, row, col) -> int:
+        """Places a list of sub-widgets in the frame."""
+        prev_row = row
+        for i, sublist in enumerate(sub_widgets):
+            row = max(row, self.place_widgets(sublist, prev_row, col + i))
+        return row
+
+    def colspan(self, widget_list) -> int:
+        """Calculates the column span required for the widget list."""
+        return max(
+            1,
+            max(
+                (
+                    sum(self.colspan(sublist) if isinstance(sublist, list) else 1 for sublist in widget)
+                    for widget in widget_list
+                    if isinstance(widget, list)
+                ),
+                default=0,
+            ),
+        )
+
+    def create_label(self, key, options, row, col, colspan):
+        """Creates and places a label widget."""
+        label = tk.Label(self, text=options.get("text", ""))
+        label.grid(row=row, column=col, columnspan=colspan, sticky="nsew")
+        self.labels[key] = label
+
+    def create_entry(self, key, options, row, col, colspan):
+        """Creates and places an entry widget."""
+        sv = tk.StringVar(value=options.get("insert", ""))
+        sv.trace_add("write", lambda *_: options.get("bindfunc", lambda _: None)(sv))
+        entry = tk.Entry(self, textvariable=sv)
+        entry.grid(row=row, column=col, columnspan=colspan, sticky="nsew")
+        self.entries[key] = entry
+
+    def create_plot(self, key, options, row, col, colspan):
+        """Creates and places a plot widget."""
+        fig = Figure(figsize=(2, 1.5), dpi=options.get("dpi", 100), tight_layout=True)
+        subplot = fig.add_subplot(111)
+        subplot.plot(*options.get("xy", ([], [])))
+        canvas = FigureCanvasTkAgg(fig, self)
+        canvas.draw()
+        canvas.get_tk_widget().grid(row=row, column=col, columnspan=colspan, sticky="nsew")
+        self.plots[key] = canvas.get_tk_widget()
+
+    def create_button(self, key, options, row, col, colspan):
+        """Creates and places a button widget."""
+        button = ttk.Button(self, text=options.get("text", ""), command=options.get("bindfunc", lambda: None))
+        button.grid(row=row, column=col, columnspan=colspan, sticky="nsew")
+        self.buttons[key] = button
+
+    def create_combobox(self, key, options, row, col, colspan):
+        """Creates and places a combobox widget."""
+        combobox = ttk.Combobox(self, values=options.get("values", []), state="readonly")
+        combobox.grid(row=row, column=col, columnspan=colspan, sticky="nsew")
+        combobox.current(0)
+        combobox.bind("<<ComboboxSelected>>", options.get("bindfunc", lambda _: None))
+        self.combobox[key] = combobox
+
+    def create_checkbox(self, key, options, row, col, colspan):
+        """Creates and places a checkbox widget."""
+        var = tk.IntVar(value=options.get("onoff", 0))
+        checkbox = ttk.Checkbutton(
+            self,
+            text=options.get("text", ""),
+            variable=var,
+            command=lambda: options.get("command", lambda _: None)(var),
+        )
+        checkbox.grid(row=row, column=col, columnspan=colspan, sticky="nsew")
+        self.checkbox[key] = checkbox
+
+    def create_radio(self, key, options, row, col, colspan):
+        """Creates and places a radio button widget."""
+        radio_frame = ttk.Frame(self)
+        var = tk.IntVar(value=options.get("value", 0))
+        for text, value in zip(options.get("texts", []), options.get("values", [])):
+            radio_button = tk.Radiobutton(
+                radio_frame,
+                text=text,
+                variable=var,
+                value=value,
+                command=lambda: options.get("command", lambda _: None)(var),
+            )
+            radio_button.pack(side=tk.LEFT)
+        radio_frame.grid(row=row, column=col, columnspan=colspan, sticky="nsew")
+        self.radios[key] = radio_frame
